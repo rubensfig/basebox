@@ -70,6 +70,10 @@ private:
   int add_l3_unicast_host(const rofl::caddress_in4 &ipv4_dst,
                           uint32_t l3_interface_id) const;
 
+  int add_l3_addr_lo(rtnl_addr *a) const;
+  int add_l3_addr_bridge() const;
+  int add_l3_addr_tap() const;
+
   switch_interface *sw;
   std::shared_ptr<tap_manager> tap_man;
   std::shared_ptr<nl_vlan> vlan;
