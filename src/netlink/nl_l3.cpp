@@ -73,8 +73,6 @@ int nl_l3::add_l3_addr(struct rtnl_addr *a) {
   assert(sw);
   assert(a);
 
-  int rv;
-
   if (a == nullptr) {
     LOG(ERROR) << __FUNCTION__ << ": addr can't be null";
     return -EINVAL;
@@ -88,75 +86,15 @@ int nl_l3::add_l3_addr(struct rtnl_addr *a) {
 
   bool is_loopback = (rtnl_link_get_flags(link) & IFF_LOOPBACK);
   bool is_bridge = rtnl_link_is_bridge(link);
-  int ifindex = 0;
-  uint16_t vid = vlan->get_vid(link);
 
   if (is_loopback)
     return add_l3_addr_lo(a);
 
-  // checks if the bridge is the configured one
-  if (is_bridge and !nl->is_bridge_configured(link)) {
-    VLOG(1) << __FUNCTION__ << ": ignoring " << OBJ_CAST(link);
-    return -EINVAL;
-  }
+  if (is_bridge or nl->is_bridge_interface(link))
+    return add_l3_addr_bridge(a, link);
 
-  // checks if the bridge is already configured with an address
-  int master_id = rtnl_link_get_master(link);
-  if (master_id and rtnl_link_get_addr(nl->get_link(master_id, AF_BRIDGE))) {
-    VLOG(1) << __FUNCTION__ << ": ignoring address on " << OBJ_CAST(link);
-    return -EINVAL;
-  }
-
-  // XXX TODO split this into several functions
-  ifindex = rtnl_addr_get_ifindex(a);
-  int port_id = nl->get_port_id(link);
-
-  if (port_id == 0) {
-    if (is_bridge or nl->is_bridge_interface(link)) {
-      LOG(INFO) << __FUNCTION__ << ": host on top of bridge";
-      port_id = 0;
-    } else {
-      LOG(ERROR) << __FUNCTION__ << ": invalid port_id 0 for link "
-                 << OBJ_CAST(link);
-      return -EINVAL;
-    }
-  }
-
-  auto ll_addr = rtnl_link_get_addr(link);
-  rofl::caddress_ll mac = libnl_lladdr_2_rofl(ll_addr);
-
-  rv = sw->l3_termination_add(port_id, vid, mac);
-  if (rv < 0) {
-    LOG(ERROR) << __FUNCTION__
-               << ": failed to setup termination mac port_id=" << port_id
-               << ", vid=" << vid << " mac=" << mac << "; rv=" << rv;
-    return rv;
-  }
+  return add_l3_addr_tap(a, link);
 }
-
-// get v4 dst (local v4 addr)
-auto prefixlen = rtnl_addr_get_prefixlen(a);
-auto addr = rtnl_addr_get_local(a);
-rofl::caddress_in4 ipv4_dst = libnl_in4addr_2_rofl(addr);
-
-rv = sw->l3_unicast_host_add(ipv4_dst,
-                             0); // TODO likely move this to separate entity
-if (rv < 0) {
-  // TODO shall we remove the l3_termination mac?
-  LOG(ERROR) << __FUNCTION__ << ": failed to setup l3 addr " << addr;
-}
-
-assert(ifindex);
-// add vlan
-bool tagged = !!rtnl_link_is_vlan(link);
-rv = vlan->add_vlan(link, vid, tagged);
-if (rv < 0) {
-  LOG(ERROR) << __FUNCTION__ << ": failed to add vlan id " << vid
-             << " (tagged=" << tagged << " to link " << OBJ_CAST(link);
-}
-
-return rv;
-} // namespace basebox
 
 int nl_l3::del_l3_addr(struct rtnl_addr *a) {
   assert(sw);
@@ -758,6 +696,7 @@ void nl_l3::get_neighbours_of_route(rtnl_route *route, nh_lookup_params *p) {
           }
           neigh = data->nl->get_neighbour(ifindex, nh_addr);
         } else {
+          LOG(INFO) << __FUNCTION__ << ": no gw";
           // lookup neigh in neigh cache, direct?
           nl_addr *dst = rtnl_route_get_dst(data->rt);
           if (dst != nullptr) {
@@ -795,8 +734,84 @@ int nl_l3::add_l3_addr_lo(rtnl_addr *a) const {
   return rv;
 }
 
-int nl_l3::add_l3_addr_bridge() const { return 0; }
+int nl_l3::add_l3_addr_bridge(rtnl_addr *a, rtnl_link *link) const { 
+  int rv;
+  int port_id = nl->get_port_id(link);
+  uint16_t vid = vlan->get_vid(link);
 
-int nl_l3::add_l3_addr_tap() const { return 0; }
+  // checks if the bridge is the configured one
+  if (!nl->is_bridge_configured(link)) {
+    VLOG(1) << __FUNCTION__ << ": ignoring " << OBJ_CAST(link);
+    return -EINVAL;
+  }
+
+  // checks if the bridge is already configured with an address
+  int master_id = rtnl_link_get_master(link);
+  if (master_id and rtnl_link_get_addr(nl->get_link(master_id, AF_BRIDGE))) {
+    VLOG(1) << __FUNCTION__ << ": ignoring address on " << OBJ_CAST(link);
+    return -EINVAL;
+  }
+
+  auto ll_addr = rtnl_link_get_addr(link);
+  rofl::caddress_ll mac = libnl_lladdr_2_rofl(ll_addr);
+
+  rv = sw->l3_termination_add(port_id, vid, mac);
+  if (rv < 0) {
+    LOG(ERROR) << __FUNCTION__
+               << ": failed to setup termination mac port_id=" << port_id
+               << ", vid=" << vid << " mac=" << mac << "; rv=" << rv;
+    return rv;
+  }
+
+  // get v4 dst (local v4 addr)
+  auto addr = rtnl_addr_get_local(a);
+  rofl::caddress_in4 ipv4_dst = libnl_in4addr_2_rofl(addr);
+
+  rv = sw->l3_unicast_host_add(ipv4_dst,
+                               0); // TODO likely move this to separate entity
+  if (rv < 0) {
+    // TODO shall we remove the l3_termination mac?
+    LOG(ERROR) << __FUNCTION__ << ": failed to setup l3 addr " << addr;
+  }
+
+  return rv;
+}
+
+int nl_l3::add_l3_addr_tap(rtnl_addr *a, rtnl_link *link) const {
+  int rv;
+  int port_id = nl->get_port_id(link);
+  uint16_t vid = vlan->get_vid(link);
+
+  auto ll_addr = rtnl_link_get_addr(link);
+  rofl::caddress_ll mac = libnl_lladdr_2_rofl(ll_addr);
+
+  rv = sw->l3_termination_add(port_id, vid, mac);
+  if (rv < 0) {
+    LOG(ERROR) << __FUNCTION__
+               << ": failed to setup termination mac port_id=" << port_id
+               << ", vid=" << vid << " mac=" << mac << "; rv=" << rv;
+    return rv;
+  }
+
+  // get v4 dst (local v4 addr)
+  auto addr = rtnl_addr_get_local(a);
+  rofl::caddress_in4 ipv4_dst = libnl_in4addr_2_rofl(addr);
+
+  rv = sw->l3_unicast_host_add(ipv4_dst,
+                               0); // TODO likely move this to separate entity
+  if (rv < 0) {
+    // TODO shall we remove the l3_termination mac?
+    LOG(ERROR) << __FUNCTION__ << ": failed to setup l3 addr " << addr;
+  }
+  // add vlan
+  bool tagged = !!rtnl_link_is_vlan(link);
+  rv = vlan->add_vlan(link, vid, tagged);
+  if (rv < 0) {
+    LOG(ERROR) << __FUNCTION__ << ": failed to add vlan id " << vid
+               << " (tagged=" << tagged << " to link " << OBJ_CAST(link);
+  }
+
+  return rv;
+}
 
 } // namespace basebox

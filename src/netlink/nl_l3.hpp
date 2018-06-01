@@ -71,8 +71,8 @@ private:
                           uint32_t l3_interface_id) const;
 
   int add_l3_addr_lo(rtnl_addr *a) const;
-  int add_l3_addr_bridge() const;
-  int add_l3_addr_tap() const;
+  int add_l3_addr_bridge(rtnl_addr *a, rtnl_link *link) const;
+  int add_l3_addr_tap(rtnl_addr *a, rtnl_link *link) const;
 
   switch_interface *sw;
   std::shared_ptr<tap_manager> tap_man;
