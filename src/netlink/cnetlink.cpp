@@ -388,7 +388,7 @@ void cnetlink::handle_wakeup(rofl::cthread &thread) {
 }
 
 void cnetlink::handle_read_event(rofl::cthread &thread, int fd) {
-  VLOG(1) << __FUNCTION__ << ": thread=" << thread << ", fd=" << fd;
+  VLOG(2) << __FUNCTION__ << ": thread=" << thread << ", fd=" << fd;
 
   if (fd == nl_cache_mngr_get_fd(mngr)) {
     int rv = nl_cache_mngr_data_ready(mngr);
@@ -563,7 +563,7 @@ void cnetlink::route_addr_apply(const nl_obj &obj) {
       l3->add_l3_addr(ADDR_CAST(obj.get_new_obj()));
       break;
     case AF_INET6:
-      VLOG(2) << __FUNCTION__ << ": new IPv6 addr (not supported)";
+      l3->add_l3_addr_v6(ADDR_CAST(obj.get_new_obj()));
       break;
     default:
       LOG(ERROR) << __FUNCTION__ << ": unsupported family " << family;
@@ -673,11 +673,8 @@ void cnetlink::route_neigh_apply(const nl_obj &obj) {
         neigh_ll_created(NEIGH_CAST(obj.get_new_obj()));
         break;
       case AF_INET:
-        l3->add_l3_neigh(NEIGH_CAST(obj.get_new_obj()));
-        break;
       case AF_INET6:
-        VLOG(2) << __FUNCTION__ << ": new IPv6 neighbour (not supported) "
-                << obj.get_new_obj();
+        l3->add_l3_neigh(NEIGH_CAST(obj.get_new_obj()));
         break;
       default:
         LOG(ERROR) << __FUNCTION__ << ": invalid family " << family;
@@ -701,10 +698,8 @@ void cnetlink::route_neigh_apply(const nl_obj &obj) {
         neigh_ll_updated(NEIGH_CAST(obj.get_old_obj()),
                          NEIGH_CAST(obj.get_new_obj()));
         break;
-      case AF_INET6:
-        LOG(INFO) << __FUNCTION__ << ": change IPv6 neighbour (not supported)";
-        break;
       case AF_INET:
+      case AF_INET6:
         l3->update_l3_neigh(NEIGH_CAST(obj.get_old_obj()),
                             NEIGH_CAST(obj.get_new_obj()));
         break;
