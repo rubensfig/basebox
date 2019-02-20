@@ -81,6 +81,11 @@ public:
   void fdb_timeout(uint32_t port_id, uint16_t vid,
                    const rofl::caddress_ll &mac);
 
+  std::deque<rtnl_neigh *> get_fdb_entries_of_port(rtnl_link *br_port, int vid,
+                                                   nl_addr *lladdr = nullptr) {
+    return bridge->get_fdb_entries_of_port(br_port, vid, lladdr);
+  }
+
 private:
   // non copyable
   cnetlink(const cnetlink &other) = delete;

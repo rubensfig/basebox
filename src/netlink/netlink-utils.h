@@ -32,6 +32,8 @@ enum link_type {
   LT_TUN,
   LT_VLAN,
   LT_VXLAN,
+  LT_VRF,
+  LT_VRF_SLAVE,
   LT_MAX /* must be last */
 };
 

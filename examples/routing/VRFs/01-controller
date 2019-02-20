@@ -1,0 +1,53 @@
+#!/bin/bash
+
+# Bridge interface example.
+# With the following physical topology:
+
+# +--------+       +------------+
+# | SERVER |       | CONTROLLER |
+# +--------+       +------------+
+#   eth1 (ns1) ------> port1
+#   eth2 (ns2) ------> port2
+
+# This script will create the following logical connections:
+
+#  port1 \
+#         > swbridge
+#  port2 /
+
+PORTA=${PORTA:-port1}
+PORTB=${PORTB:-port3}
+BRIDGE=${BRIDGE:-swbridge}
+VRF=${VRF:-red}
+VRF_TABLE_ID=${VRF_TABLE_ID:-123}
+BR_VLAN=${BR_VLAN:-100}
+
+function setup() {
+  # vrf
+  ip link add $VRF type vrf table $VRF_TABLE_ID
+  ip link set $VRF up
+
+  # bridge
+  ip link add name ${BRIDGE} type bridge vlan_filtering 1 vlan_default_pvid 0
+  ip link set ${BRIDGE} up
+
+  # port 1
+  ip link set ${PORTA} master ${BRIDGE}
+  bridge vlan add vid ${BR_VLAN} dev ${PORTA}
+  ip link set ${PORTA} up
+
+  # port 2
+  ip link set ${PORTB} master ${BRIDGE}
+  bridge vlan add vid ${BR_VLAN} dev ${PORTB}
+  ip link set ${PORTB} up
+
+  # SVI
+  ip link add link ${BRIDGE} name ${BRIDGE}.${BR_VLAN} type vlan id ${BR_VLAN}
+  bridge vlan add vid ${BR_VLAN} dev ${BRIDGE} self
+  ip link set ${BRIDGE}.${BR_VLAN} up
+}
+
+function teardown {
+  ip link del ${VRF}
+  ip link del ${BRIDGE}
+}

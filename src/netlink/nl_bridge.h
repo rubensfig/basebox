@@ -57,6 +57,11 @@ public:
                   const rofl::caddress_ll &mac);
   int get_ifindex() { return rtnl_link_get_ifindex(bridge); }
 
+  // XXX Improve cache search mechanism
+  std::deque<rtnl_neigh *> get_fdb_entries_of_port(rtnl_link *br_port,
+                                                   uint16_t vid,
+                                                   nl_addr *lladdr = nullptr);
+
   void get_bridge_ports(
       std::tuple<std::shared_ptr<tap_manager>, std::deque<rtnl_link *> *>
           &params, // XXX TODO make a struct here
@@ -66,9 +71,6 @@ public:
 
 private:
   void update_vlans(rtnl_link *, rtnl_link *);
-
-  std::deque<rtnl_neigh *> get_fdb_entries_of_port(rtnl_link *br_port,
-                                                   uint16_t vid);
 
   void update_access_ports(rtnl_link *vxlan_link, rtnl_link *br_link,
                            const uint16_t vid, const uint32_t tunnel_id,

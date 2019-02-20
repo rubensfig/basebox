@@ -28,6 +28,7 @@ namespace basebox {
 
 class cnetlink;
 class nl_vlan;
+class nl_bridge;
 class switch_interface;
 
 class nl_l3 {
@@ -86,7 +87,7 @@ private:
   int del_l3_ecmp_route(rtnl_route *r,
                         const std::set<uint32_t> &l3_interface_ids);
 
-  int add_l3_neigh_egress(struct rtnl_neigh *n, uint32_t *l3_interface_id);
+  int add_l3_neigh_egress(struct rtnl_neigh *n, uint32_t *l3_interface_id, int vid = 0);
   int del_l3_neigh_egress(struct rtnl_neigh *n);
 
   int add_l3_egress(int ifindex, const uint16_t vid,

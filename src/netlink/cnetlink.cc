@@ -327,7 +327,9 @@ bool cnetlink::is_bridge_interface(rtnl_link *l) const {
         if (get_port_id(rtnl_link_get_ifindex(br_intf)) != 0)
           return true;
       }
-    }
+      // handle this better, need to check for link
+    } else if (lt == LT_BRIDGE_SLAVE)
+      return true;
 
     // XXX TODO check rather nl_bridge ?
   }
@@ -920,6 +922,9 @@ void cnetlink::link_created(rtnl_link *link) noexcept {
     VLOG(1) << __FUNCTION__ << ": new bond interface " << OBJ_CAST(link);
     bond->add_lag(link);
   } break;
+  case LT_VRF: {
+    VLOG(1) << __FUNCTION__ << ": new vrf interface " << OBJ_CAST(link);
+  } break;
   default:
     LOG(WARNING) << __FUNCTION__ << ": ignoring link with lt=" << lt
                  << " link:" << OBJ_CAST(link);
@@ -970,9 +975,13 @@ void cnetlink::link_updated(rtnl_link *old_link, rtnl_link *new_link) noexcept {
                 << rtnl_link_get_name(new_link);
       rtnl_link *_bond = get_link(rtnl_link_get_master(new_link), AF_UNSPEC);
       bond->add_lag_member(_bond, new_link);
-      break;
+    } else if (lt_new == LT_VRF_SLAVE) {
+      LOG(INFO) << __FUNCTION__ << ": link enslaved "
+                << rtnl_link_get_name(new_link);
     }
+    break;
     /* fallthrough */
+  case LT_VRF: // No need to care about the vrf interface itself
   case LT_VLAN:
   case LT_BOND:
   case LT_BRIDGE:
