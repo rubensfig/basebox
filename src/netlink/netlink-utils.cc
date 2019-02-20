@@ -17,7 +17,7 @@
 
 #define lt_names                                                               \
   "unsupported", "team", "bond", "bond_slave", "bridge", "bridge_slave",       \
-      "tun", "vlan", "vxlan"
+      "tun", "vlan", "vxlan", "vrf", "vrf_slave"
 
 namespace basebox {
 

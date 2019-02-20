@@ -55,6 +55,7 @@ public:
   struct rtnl_neigh *get_neighbour(int ifindex, struct nl_addr *a) const;
 
   bool is_bridge_interface(rtnl_link *l) const;
+  bool is_bridge_interface(uint32_t ifaceid) const;
   bool is_bridge_configured(rtnl_link *l);
   int get_port_id(rtnl_link *l) const;
   int get_port_id(int ifindex) const;
@@ -81,6 +82,9 @@ public:
 
   void fdb_timeout(uint32_t port_id, uint16_t vid,
                    const rofl::caddress_ll &mac);
+
+  std::deque<rtnl_neigh *> search_fdb(uint32_t vid = 0,
+                                      nl_addr *lladdr = nullptr);
 
 private:
   // non copyable

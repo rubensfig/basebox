@@ -303,6 +303,10 @@ struct rtnl_neigh *cnetlink::get_neighbour(int ifindex,
   return rtnl_neigh_get(caches[NL_NEIGH_CACHE], ifindex, a);
 }
 
+bool cnetlink::is_bridge_interface(uint32_t ifaceid) const {
+  return is_bridge_interface(get_link_by_ifindex(ifaceid));
+}
+
 bool cnetlink::is_bridge_interface(rtnl_link *l) const {
 
   // is a vlan on top of the bridge?
@@ -328,7 +332,9 @@ bool cnetlink::is_bridge_interface(rtnl_link *l) const {
         if (get_port_id(rtnl_link_get_ifindex(br_intf)) != 0)
           return true;
       }
-    }
+      // handle this better, need to check for link
+    } else if (lt == LT_BRIDGE_SLAVE)
+      return true;
 
     // XXX TODO check rather nl_bridge ?
   }
@@ -922,6 +928,9 @@ void cnetlink::link_created(rtnl_link *link) noexcept {
     VLOG(1) << __FUNCTION__ << ": new bond interface " << OBJ_CAST(link);
     bond->add_lag(link);
   } break;
+  case LT_VRF: {
+    VLOG(1) << __FUNCTION__ << ": new vrf interface " << OBJ_CAST(link);
+  } break;
   default:
     LOG(WARNING) << __FUNCTION__ << ": ignoring link with lt=" << lt
                  << " link:" << OBJ_CAST(link);
@@ -965,6 +974,24 @@ void cnetlink::link_updated(rtnl_link *old_link, rtnl_link *new_link) noexcept {
       }
     }
     break;
+  case LT_VLAN:
+    if (lt_new != LT_VRF_SLAVE) {
+      LOG(INFO) << __FUNCTION__ << ": ignoring update of VLAN interface";
+      break;
+    }
+    LOG(INFO) << __FUNCTION__ << ": link enslaved "
+              << rtnl_link_get_name(new_link) << " to vrf "
+              << OBJ_CAST(get_link_by_ifindex(rtnl_link_get_master(new_link)));
+    l3->vrf_attach(old_link, new_link);
+    break;
+  case LT_VRF_SLAVE:
+    if (lt_new != LT_VLAN) {
+      return;
+    }
+    LOG(INFO) << __FUNCTION__ << ": freed vrf slave interface "
+              << OBJ_CAST(old_link);
+    l3->vrf_detach(old_link, new_link);
+    break;
   case LT_TUN:
     if (lt_new == LT_BOND_SLAVE) {
       // XXX link enslaved
@@ -972,11 +999,13 @@ void cnetlink::link_updated(rtnl_link *old_link, rtnl_link *new_link) noexcept {
                 << rtnl_link_get_name(new_link);
       rtnl_link *_bond = get_link(rtnl_link_get_master(new_link), AF_UNSPEC);
       bond->add_lag_member(_bond, new_link);
-      break;
+    } else if (lt_new == LT_VRF_SLAVE) {
+      LOG(INFO) << __FUNCTION__ << ": link enslaved "
+                << rtnl_link_get_name(new_link) << " but not handled";
     }
     iface->changed(old_link, new_link);
     break;
-  case LT_VLAN:
+  case LT_VRF: // No need to care about the vrf interface itself
   case LT_BOND:
   case LT_BRIDGE:
   case LT_UNSUPPORTED:
@@ -1042,6 +1071,7 @@ void cnetlink::link_deleted(rtnl_link *link) noexcept {
     VLOG(1) << __FUNCTION__ << ": removed bond interface " << OBJ_CAST(link);
     bond->remove_lag(link);
   } break;
+  case LT_VRF:
   default:
     LOG(ERROR) << __FUNCTION__ << ": link type not handled " << lt;
     break;
@@ -1258,6 +1288,20 @@ bool cnetlink::is_bridge_configured(rtnl_link *l) {
     return is_bridge_interface(l);
 
   return bridge->is_bridge_interface(l);
+}
+
+std::deque<rtnl_neigh *> cnetlink::search_fdb(uint32_t vid, nl_addr *lladdr) {
+  std::deque<rtnl_link *> br_ports;
+  get_bridge_ports(bridge->get_ifindex(), &br_ports);
+
+  std::deque<rtnl_neigh *> fdb_entries;
+  for (auto port : br_ports) {
+    auto fdb = bridge->get_fdb_entries_of_port(port, vid, lladdr);
+
+    std::copy(fdb.begin(), fdb.end(), std::back_inserter(fdb_entries));
+  }
+
+  return fdb_entries;
 }
 
 } // namespace basebox
