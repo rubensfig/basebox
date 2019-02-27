@@ -1350,21 +1350,21 @@ int controller::ingress_port_vlan_drop_accept_all(uint32_t port) noexcept {
 }
 
 int controller::ingress_port_vlan_add(uint32_t port, uint16_t vid,
-                                      bool pvid) noexcept {
+                                      bool pvid, uint32_t vrf_id, bool update) noexcept {
   int rv = 0;
   try {
     rofl::crofdpt &dpt = set_dpt(dptid, true);
     if (pvid) {
       dpt.send_flow_mod_message(
           rofl::cauxid(0),
-          fm_driver.enable_port_vid_ingress(dpt.get_version(), port, vid, 123, true));
+          fm_driver.enable_port_vid_ingress(dpt.get_version(), port, vid, vrf_id, update));
       dpt.send_flow_mod_message(
           rofl::cauxid(0),
           fm_driver.enable_port_pvid_ingress(dpt.get_version(), port, vid));
     } else {
       dpt.send_flow_mod_message(
           rofl::cauxid(0),
-          fm_driver.enable_port_vid_ingress(dpt.get_version(), port, vid));
+          fm_driver.enable_port_vid_ingress(dpt.get_version(), port, vid, vrf_id, update));
     }
   } catch (rofl::eRofBaseNotFound &e) {
     LOG(ERROR) << ": caught rofl::eRofBaseNotFound";

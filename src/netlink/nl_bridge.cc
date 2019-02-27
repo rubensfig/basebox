@@ -387,6 +387,7 @@ std::deque<rtnl_neigh *> nl_bridge::get_fdb_entries_of_port(rtnl_link *br_port,
   if (lladdr)
     rtnl_neigh_set_lladdr(filter.get(), lladdr);
 
+  VLOG(3) << __FUNCTION__ << ": searching for " << OBJ_CAST(filter.get());
   std::deque<rtnl_neigh *> neighs;
   nl_cache_foreach_filter(nl->get_cache(cnetlink::NL_NEIGH_CACHE),
                           OBJ_CAST(filter.get()),

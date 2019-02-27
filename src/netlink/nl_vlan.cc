@@ -17,6 +17,21 @@ namespace basebox {
 
 nl_vlan::nl_vlan(cnetlink *nl) : swi(nullptr), nl(nl) {}
 
+int nl_vlan::update_vlan(rtnl_link *link, uint16_t vid, bool tagged, uint32_t vrf_id) const {
+  assert(swi);
+
+  VLOG(2) << __FUNCTION__ << ": add vid=" << vid << " tagged=" << tagged << " vrf=" << vrf_id;
+  if (!is_vid_valid(vid)) {
+    LOG(ERROR) << __FUNCTION__ << ": invalid vid " << vid;
+    return -EINVAL;
+  }
+  uint32_t port_id = nl->get_port_id(link);
+
+  swi->ingress_port_vlan_add(port_id, vid, !tagged /* pvid == !tagged */, vrf_id, true);
+
+  return 0;
+}
+
 int nl_vlan::add_vlan(rtnl_link *link, uint16_t vid, bool tagged) const {
   assert(swi);
 

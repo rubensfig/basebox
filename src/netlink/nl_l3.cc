@@ -466,7 +466,6 @@ int nl_l3::add_l3_neigh_egress(struct rtnl_neigh *n, uint32_t *l3_interface_id, 
 
   struct nl_addr *d_mac = rtnl_neigh_get_lladdr(n);
   int ifindex = rtnl_neigh_get_ifindex(n);
-  VLOG(1) << " IFINDEX " << ifindex;
   std::unique_ptr<rtnl_link, decltype(&rtnl_link_put)> link(
       nl->get_link_by_ifindex(ifindex), &rtnl_link_put);
 
@@ -476,6 +475,8 @@ int nl_l3::add_l3_neigh_egress(struct rtnl_neigh *n, uint32_t *l3_interface_id, 
   bool tagged = false; 
   if (!vid) {
     vid = vlan->get_vid(link.get());
+    tagged = !!rtnl_link_is_vlan(link.get());
+  }
   auto s_mac = rtnl_link_get_addr(link.get());
 
   // XXX TODO is this still needed?
@@ -540,20 +541,11 @@ int nl_l3::add_l3_neigh(struct rtnl_neigh *n) {
     int vid = rtnl_link_vlan_get_id(link);
     auto lladdr = rtnl_neigh_get_lladdr(n);
 
-    // get master
-    auto masterid = rtnl_link_get_link(link);
+    auto fdb_neigh = nl->search_fdb(vid, lladdr);
 
-    // filter for port
-    std::deque<rtnl_link *> bridge_interfaces;
-    nl->get_bridge_ports(masterid, &bridge_interfaces);
-
-    // XXX improve search
-    rtnl_neigh *fdb_neigh;
-    for (auto i : bridge_interfaces) {
-      auto fdb = nl->get_fdb_entries_of_port(i, vid, lladdr);
-
-      if (fdb.size())
-        fdb_neigh = fdb.front();
+    for (auto neigh: fdb_neigh) {
+      VLOG(2) << __FUNCTION__ << ": found iface=" << OBJ_CAST(neigh);
+      //rv = add_l3_neigh_egress(neigh, &l3_interface_id, vid);
     }
 
     VLOG(2) << __FUNCTION__ << ": found iface=" << OBJ_CAST(fdb_neigh);
@@ -1757,17 +1749,13 @@ void nl_l3::vrf_attach(rtnl_link* old_link, rtnl_link* new_link) {
 
   // get bridge ports, and rewrite VLAN with the 
   // correct VRF
-  int br_iface = rtnl_link_get_link(new_link);
-  std::deque<rtnl_link *> br_ports;
-  nl->get_bridge_ports(br_iface, &br_ports);
-
-  for (auto i: br_ports) {
-    VLOG(1) << " FOUND " << OBJ_CAST(i); 
-    auto fdb = nl->get_fdb_entries_of_port(i, vid);
-
-    for (auto j: fdb)
-      VLOG(1) << " FOUND " << OBJ_CAST(j); 
-
+  auto fdb_entries = nl->search_fdb(vid, nullptr);
+  for (auto entry: fdb_entries){ 
+    std::unique_ptr<rtnl_link, decltype(&rtnl_link_put)> link(
+        nl->get_link_by_ifindex(rtnl_neigh_get_ifindex(entry)), &rtnl_link_put);
+    vlan->update_vlan(link.get(), vid, false, table_id);
   }
+
+}
 
 } // namespace basebox

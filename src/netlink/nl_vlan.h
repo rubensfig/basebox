@@ -22,6 +22,7 @@ public:
 
   int add_vlan(rtnl_link *link, uint16_t vid, bool tagged) const;
   int remove_vlan(rtnl_link *link, uint16_t vid, bool tagged) const;
+  int update_vlan(rtnl_link *link, uint16_t vid, bool tagged, uint32_t vrf_id) const;
 
   uint16_t get_vid(rtnl_link *link);
 
