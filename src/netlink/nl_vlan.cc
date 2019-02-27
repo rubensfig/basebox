@@ -113,7 +113,6 @@ uint16_t nl_vlan::get_vid(rtnl_link *link) {
   // uint32_t pport_id = nl->get_port_id(link);
   auto lt = get_link_type(link);
 
-  VLOG(1) << ": LT " << lt;
   switch (lt) {
   case LT_BRIDGE:
     VLOG(2) << __FUNCTION__ << ": bridge default vid " << default_vid;

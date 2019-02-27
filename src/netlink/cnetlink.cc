@@ -968,6 +968,16 @@ void cnetlink::link_updated(rtnl_link *old_link, rtnl_link *new_link) noexcept {
       }
     }
     break;
+  case LT_VLAN:
+    if (lt_new != LT_VRF_SLAVE) {
+      LOG(INFO) << __FUNCTION__ << ": ignoring update of VLAN interface";
+      break;
+    }
+    LOG(INFO) << __FUNCTION__ << ": link enslaved "
+              << rtnl_link_get_name(new_link) << " to vrf "
+              << OBJ_CAST(get_link_by_ifindex(rtnl_link_get_master(new_link)));
+    l3->vrf_attach(old_link, new_link);
+    break;
   case LT_TUN:
     if (lt_new == LT_BOND_SLAVE) {
       // XXX link enslaved
@@ -982,9 +992,9 @@ void cnetlink::link_updated(rtnl_link *old_link, rtnl_link *new_link) noexcept {
     break;
     /* fallthrough */
   case LT_VRF: // No need to care about the vrf interface itself
-  case LT_VLAN:
   case LT_BOND:
   case LT_BRIDGE:
+  case LT_VRF_SLAVE:
   case LT_UNSUPPORTED:
     VLOG(2) << __FUNCTION__
             << ": ignoring update (not supported) of old_lt=" << lt_old

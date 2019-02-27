@@ -52,6 +52,8 @@ public:
   int update_l3_route(struct rtnl_route *r_old, struct rtnl_route *r_new);
   int del_l3_route(struct rtnl_route *r);
 
+  void vrf_attach(rtnl_link* old_link, rtnl_link* new_link);
+
   void get_nexthops_of_route(rtnl_route *route,
                              std::deque<struct rtnl_nexthop *> *nhs) noexcept;
 
@@ -87,7 +89,8 @@ private:
   int del_l3_ecmp_route(rtnl_route *r,
                         const std::set<uint32_t> &l3_interface_ids);
 
-  int add_l3_neigh_egress(struct rtnl_neigh *n, uint32_t *l3_interface_id, int vid = 0);
+  int add_l3_neigh_egress(struct rtnl_neigh *n, uint32_t *l3_interface_id,
+                          int vid = 0);
   int del_l3_neigh_egress(struct rtnl_neigh *n);
 
   int add_l3_egress(int ifindex, const uint16_t vid,

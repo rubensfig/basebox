@@ -1357,7 +1357,7 @@ int controller::ingress_port_vlan_add(uint32_t port, uint16_t vid,
     if (pvid) {
       dpt.send_flow_mod_message(
           rofl::cauxid(0),
-          fm_driver.enable_port_vid_ingress(dpt.get_version(), port, vid));
+          fm_driver.enable_port_vid_ingress(dpt.get_version(), port, vid, 123, true));
       dpt.send_flow_mod_message(
           rofl::cauxid(0),
           fm_driver.enable_port_pvid_ingress(dpt.get_version(), port, vid));

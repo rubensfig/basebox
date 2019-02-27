@@ -12,6 +12,7 @@
 #include <netlink/route/addr.h>
 #include <netlink/route/link.h>
 #include <netlink/route/link/vlan.h>
+#include <netlink/route/link/vrf.h>
 #include <netlink/route/neighbour.h>
 #include <netlink/route/route.h>
 
@@ -465,14 +466,15 @@ int nl_l3::add_l3_neigh_egress(struct rtnl_neigh *n, uint32_t *l3_interface_id, 
 
   struct nl_addr *d_mac = rtnl_neigh_get_lladdr(n);
   int ifindex = rtnl_neigh_get_ifindex(n);
+  VLOG(1) << " IFINDEX " << ifindex;
   std::unique_ptr<rtnl_link, decltype(&rtnl_link_put)> link(
       nl->get_link_by_ifindex(ifindex), &rtnl_link_put);
 
   if (link == nullptr)
     return -EINVAL;
 
-  bool tagged = !!rtnl_link_is_vlan(link.get());
-  if (!vid)
+  bool tagged = false; 
+  if (!vid) {
     vid = vlan->get_vid(link.get());
   auto s_mac = rtnl_link_get_addr(link.get());
 
@@ -504,6 +506,7 @@ int nl_l3::del_l3_neigh_egress(struct rtnl_neigh *n) {
     return -EINVAL;
 
   uint16_t vid = vlan->get_vid(link.get());
+  // bool tagged = !!rtnl_link_is_vlan(link.get());
   auto s_mac = rtnl_link_get_addr(link.get());
 
   // XXX TODO del vlan
@@ -569,6 +572,7 @@ int nl_l3::add_l3_neigh(struct rtnl_neigh *n) {
   }
 
   addr = rtnl_neigh_get_dst(n);
+  VLOG(1) << " NEIGH ADD " << addr;
   if (family == AF_INET) {
     rofl::caddress_in4 ipv4_dst = libnl_in4addr_2_rofl(addr, &rv);
     if (rv < 0) {
@@ -1735,5 +1739,35 @@ bool nl_l3::is_link_local_address(const struct nl_addr *addr) {
 
   return !nl_addr_cmp_prefix(ll_addr.get(), addr);
 }
+
+void nl_l3::vrf_attach(rtnl_link* old_link, rtnl_link* new_link) {
+  assert(link);
+
+  int vid = vlan->get_vid(old_link);
+  rtnl_link* vrf = nl->get_link_by_ifindex(rtnl_link_get_master(new_link));
+
+  if (!rtnl_link_is_vrf(vrf)) {
+    LOG(ERROR) << __FUNCTION__ << ": no VRF interface";
+    return;
+  }
+
+  uint32_t table_id;
+  rtnl_link_vrf_get_tableid(vrf, &table_id);
+  VLOG(1) << __FUNCTION__ << ": table id=" << table_id << " vrf=" << rtnl_link_get_name(vrf);
+
+  // get bridge ports, and rewrite VLAN with the 
+  // correct VRF
+  int br_iface = rtnl_link_get_link(new_link);
+  std::deque<rtnl_link *> br_ports;
+  nl->get_bridge_ports(br_iface, &br_ports);
+
+  for (auto i: br_ports) {
+    VLOG(1) << " FOUND " << OBJ_CAST(i); 
+    auto fdb = nl->get_fdb_entries_of_port(i, vid);
+
+    for (auto j: fdb)
+      VLOG(1) << " FOUND " << OBJ_CAST(j); 
+
+  }
 
 } // namespace basebox
