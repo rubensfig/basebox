@@ -17,7 +17,7 @@ namespace basebox {
 
 nl_vlan::nl_vlan(cnetlink *nl) : swi(nullptr), nl(nl) {}
 
-int nl_vlan::update_vlan(rtnl_link *link, uint16_t vid, bool tagged, uint32_t vrf_id) const {
+int nl_vlan::update_vlan(rtnl_link *link, uint16_t vid, bool tagged, uint16_t vrf_id) const {
   assert(swi);
 
   VLOG(2) << __FUNCTION__ << ": add vid=" << vid << " tagged=" << tagged << " vrf=" << vrf_id;
@@ -27,12 +27,13 @@ int nl_vlan::update_vlan(rtnl_link *link, uint16_t vid, bool tagged, uint32_t vr
   }
   uint32_t port_id = nl->get_port_id(link);
 
-  swi->ingress_port_vlan_add(port_id, vid, !tagged /* pvid == !tagged */, vrf_id, true);
+  swi->ingress_port_vlan_remove(port_id, vid, !tagged);
+  swi->ingress_port_vlan_add(port_id, vid, !tagged /* pvid == !tagged */, vrf_id, false);
 
   return 0;
 }
 
-int nl_vlan::add_vlan(rtnl_link *link, uint16_t vid, bool tagged) const {
+int nl_vlan::add_vlan(rtnl_link *link, uint16_t vid, bool tagged, uint16_t vrf_id) const {
   assert(swi);
 
   VLOG(2) << __FUNCTION__ << ": add vid=" << vid << " tagged=" << tagged;
@@ -49,7 +50,7 @@ int nl_vlan::add_vlan(rtnl_link *link, uint16_t vid, bool tagged) const {
   }
 
   int rv =
-      swi->ingress_port_vlan_add(port_id, vid, !tagged /* pvid == !tagged */);
+      swi->ingress_port_vlan_add(port_id, vid, !tagged /* pvid == !tagged */, vrf_id, false);
   if (rv < 0) {
     LOG(ERROR) << __FUNCTION__
                << ": failed to setup ingress vlan 1 (untagged) on port_id="
@@ -74,7 +75,7 @@ int nl_vlan::add_vlan(rtnl_link *link, uint16_t vid, bool tagged) const {
   return rv;
 }
 
-int nl_vlan::remove_vlan(rtnl_link *link, uint16_t vid, bool tagged) const {
+int nl_vlan::remove_vlan(rtnl_link *link, uint16_t vid, bool tagged, uint16_t vrf_id) const {
   assert(swi);
 
   if (!is_vid_valid(vid)) {

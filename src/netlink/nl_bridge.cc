@@ -289,7 +289,7 @@ void nl_bridge::update_vlans(rtnl_link *old_link, rtnl_link *new_link) {
               }
             } else {
               // normal vlan port
-              VLOG(3) << __FUNCTION__ << ": add vid=" << vid
+              VLOG(2) << __FUNCTION__ << ": add vid=" << vid
                       << " on pport_no=" << pport_no
                       << " link: " << OBJ_CAST(_link);
               sw->egress_bridge_port_vlan_add(pport_no, vid, egress_untagged);

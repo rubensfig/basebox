@@ -20,9 +20,9 @@ public:
 
   void register_switch_interface(switch_interface *swi) { this->swi = swi; }
 
-  int add_vlan(rtnl_link *link, uint16_t vid, bool tagged) const;
-  int remove_vlan(rtnl_link *link, uint16_t vid, bool tagged) const;
-  int update_vlan(rtnl_link *link, uint16_t vid, bool tagged, uint32_t vrf_id) const;
+  int add_vlan(rtnl_link *link, uint16_t vid, bool tagged, uint16_t vrf_id = 0) const;
+  int remove_vlan(rtnl_link *link, uint16_t vid, bool tagged, uint16_t vrf_id = 0) const;
+  int update_vlan(rtnl_link *link, uint16_t vid, bool tagged, uint16_t vrf_id = 0) const;
 
   uint16_t get_vid(rtnl_link *link);
 

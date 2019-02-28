@@ -36,12 +36,12 @@ function setup() {
   bridge vlan add vid ${BR_VLAN} dev ${PORTA}
   ip link set ${PORTA} up
 
-  # port 2
+  ## port 2
   ip link set ${PORTB} master ${BRIDGE}
   bridge vlan add vid ${BR_VLAN} dev ${PORTB}
   ip link set ${PORTB} up
 
-  # SVI
+  ## SVI
   ip link add link ${BRIDGE} name ${BRIDGE}.${BR_VLAN} type vlan id ${BR_VLAN}
   bridge vlan add vid ${BR_VLAN} dev ${BRIDGE} self
   ip link set ${BRIDGE}.${BR_VLAN} up

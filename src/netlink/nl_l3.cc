@@ -148,6 +148,7 @@ int nl_l3::add_l3_addr(struct rtnl_addr *a) {
   bool is_loopback = (rtnl_link_get_flags(link) & IFF_LOOPBACK);
   bool is_bridge = rtnl_link_is_bridge(link); // XXX TODO svi as well?
   int ifindex = 0;
+  uint32_t table_id = 0; // real size is uint16
   uint16_t vid = vlan->get_vid(link);
 
   // checks if the bridge is the configured one
@@ -162,6 +163,9 @@ int nl_l3::add_l3_addr(struct rtnl_addr *a) {
       rtnl_link_get_addr(nl->get_link(master_id, AF_BRIDGE))) {
     VLOG(1) << __FUNCTION__ << ": ignoring address on " << OBJ_CAST(link);
     return -EINVAL;
+  } 
+  if (master_id && !is_bridge && rtnl_link_is_vrf(nl->get_link_by_ifindex(master_id))){
+    rtnl_link_vrf_get_tableid(nl->get_link_by_ifindex(master_id), &table_id);
   }
 
   // XXX TODO split this into several functions
@@ -232,7 +236,7 @@ int nl_l3::add_l3_addr(struct rtnl_addr *a) {
     assert(ifindex);
     // add vlan
     bool tagged = !!rtnl_link_is_vlan(link);
-    rv = vlan->add_vlan(link, vid, tagged);
+    rv = vlan->add_vlan(link, vid, tagged, table_id);
     if (rv < 0) {
       LOG(ERROR) << __FUNCTION__ << ": failed to add vlan id " << vid
                  << " (tagged=" << tagged << " to link " << OBJ_CAST(link);
@@ -564,7 +568,6 @@ int nl_l3::add_l3_neigh(struct rtnl_neigh *n) {
   }
 
   addr = rtnl_neigh_get_dst(n);
-  VLOG(1) << " NEIGH ADD " << addr;
   if (family == AF_INET) {
     rofl::caddress_in4 ipv4_dst = libnl_in4addr_2_rofl(addr, &rv);
     if (rv < 0) {
@@ -1735,7 +1738,7 @@ bool nl_l3::is_link_local_address(const struct nl_addr *addr) {
 void nl_l3::vrf_attach(rtnl_link* old_link, rtnl_link* new_link) {
   assert(link);
 
-  int vid = vlan->get_vid(old_link);
+  uint16_t vid = vlan->get_vid(old_link);
   rtnl_link* vrf = nl->get_link_by_ifindex(rtnl_link_get_master(new_link));
 
   if (!rtnl_link_is_vrf(vrf)) {
@@ -1753,7 +1756,8 @@ void nl_l3::vrf_attach(rtnl_link* old_link, rtnl_link* new_link) {
   for (auto entry: fdb_entries){ 
     std::unique_ptr<rtnl_link, decltype(&rtnl_link_put)> link(
         nl->get_link_by_ifindex(rtnl_neigh_get_ifindex(entry)), &rtnl_link_put);
-    vlan->update_vlan(link.get(), vid, false, table_id);
+
+    vlan->update_vlan(link.get(), vid, true, table_id);
   }
 
 }
