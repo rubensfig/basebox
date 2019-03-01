@@ -979,6 +979,12 @@ int nl_l3::update_l3_route(struct rtnl_route *r_old, struct rtnl_route *r_new) {
     return -ENOTSUP;
   }
 
+  //uint32_t old_iface = rtnl_route_get_iif(r_old);
+  //uint32_t new_iface = rtnl_route_get_iif(r_new);
+  //if () {
+    //VLOG(1) << __FUNCTION__
+            //<< ": route change not supported interface changed";
+  //}
   switch (rtnl_route_get_type(r_old)) {
   case RTN_UNICAST:
     rv = update_l3_unicast_route(r_old, r_new);
@@ -1607,7 +1613,13 @@ void nl_l3::vrf_attach(rtnl_link* old_link, rtnl_link* new_link) {
     std::unique_ptr<rtnl_link, decltype(&rtnl_link_put)> link(
         nl->get_link_by_ifindex(rtnl_neigh_get_ifindex(entry)), &rtnl_link_put);
 
-    vlan->update_vlan(link.get(), vid, true, table_id);
+    vlan->remove_vlan(link.get(), vid, true);
+  }
+  for (auto entry: fdb_entries){ 
+    std::unique_ptr<rtnl_link, decltype(&rtnl_link_put)> link(
+        nl->get_link_by_ifindex(rtnl_neigh_get_ifindex(entry)), &rtnl_link_put);
+
+    vlan->add_vlan(link.get(), vid, true, table_id);
   }
 
 }

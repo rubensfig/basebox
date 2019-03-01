@@ -113,7 +113,7 @@ public:
   virtual int ingress_port_vlan_accept_all(uint32_t port) noexcept = 0;
   virtual int ingress_port_vlan_drop_accept_all(uint32_t port) noexcept = 0;
   virtual int ingress_port_vlan_add(uint32_t port, uint16_t vid,
-                                    bool pvid, uint16_t vrf_id=0, bool update=false) noexcept = 0;
+                                    bool pvid, uint16_t vrf_id=0) noexcept = 0;
   virtual int ingress_port_vlan_remove(uint32_t port, uint16_t vid,
                                        bool pvid) noexcept = 0;
 

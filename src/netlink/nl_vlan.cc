@@ -17,26 +17,10 @@ namespace basebox {
 
 nl_vlan::nl_vlan(cnetlink *nl) : swi(nullptr), nl(nl) {}
 
-int nl_vlan::update_vlan(rtnl_link *link, uint16_t vid, bool tagged, uint16_t vrf_id) const {
-  assert(swi);
-
-  VLOG(2) << __FUNCTION__ << ": add vid=" << vid << " tagged=" << tagged << " vrf=" << vrf_id;
-  if (!is_vid_valid(vid)) {
-    LOG(ERROR) << __FUNCTION__ << ": invalid vid " << vid;
-    return -EINVAL;
-  }
-  uint32_t port_id = nl->get_port_id(link);
-
-  swi->ingress_port_vlan_remove(port_id, vid, !tagged);
-  swi->ingress_port_vlan_add(port_id, vid, !tagged /* pvid == !tagged */, vrf_id, false);
-
-  return 0;
-}
-
 int nl_vlan::add_vlan(rtnl_link *link, uint16_t vid, bool tagged, uint16_t vrf_id) const {
   assert(swi);
 
-  VLOG(2) << __FUNCTION__ << ": add vid=" << vid << " tagged=" << tagged;
+  VLOG(2) << __FUNCTION__ << ": add vid=" << vid << " tagged=" << tagged << " vrf=" << vrf_id;
   if (!is_vid_valid(vid)) {
     LOG(ERROR) << __FUNCTION__ << ": invalid vid " << vid;
     return -EINVAL;
@@ -50,7 +34,7 @@ int nl_vlan::add_vlan(rtnl_link *link, uint16_t vid, bool tagged, uint16_t vrf_i
   }
 
   int rv =
-      swi->ingress_port_vlan_add(port_id, vid, !tagged /* pvid == !tagged */, vrf_id, false);
+      swi->ingress_port_vlan_add(port_id, vid, !tagged, vrf_id);
   if (rv < 0) {
     LOG(ERROR) << __FUNCTION__
                << ": failed to setup ingress vlan 1 (untagged) on port_id="
@@ -126,8 +110,13 @@ int nl_vlan::remove_vlan(rtnl_link *link, uint16_t vid, bool tagged, uint16_t vr
 
 uint16_t nl_vlan::get_vid(rtnl_link *link) {
   uint16_t vid = 0;
-  // uint32_t pport_id = nl->get_port_id(link);
+  uint32_t pport_id = nl->get_port_id(link);
   auto lt = get_link_type(link);
+
+  if (!nl->is_bridge_interface(link) and pport_id == 0) {
+    VLOG(2) << __FUNCTION__ << ": invalid interface";
+    return vid;
+  }
 
   switch (lt) {
   case LT_BRIDGE:
@@ -148,7 +137,7 @@ uint16_t nl_vlan::get_vid(rtnl_link *link) {
     break;
   }
 
-  VLOG(3) << __FUNCTION__ << ": vid=" << vid << " interface=" << OBJ_CAST(link);
+  VLOG(2) << __FUNCTION__ << ": vid=" << vid << " interface=" << OBJ_CAST(link);
 
   return vid;
 }
