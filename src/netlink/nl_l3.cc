@@ -226,7 +226,7 @@ int nl_l3::add_l3_addr(struct rtnl_addr *a) {
     return rv;
   }
 
-  rv = sw->l3_unicast_route_add(ipv4_dst, mask, 0, false, false);
+  rv = sw->l3_unicast_route_add(ipv4_dst, mask, 0, false, false, table_id);
   if (rv < 0) {
     // TODO shall we remove the l3_termination mac?
     LOG(ERROR) << __FUNCTION__ << ": failed to setup l3 addr " << addr;
@@ -451,7 +451,7 @@ int nl_l3::del_l3_addr(struct rtnl_addr *a) {
   return rv;
 }
 
-int nl_l3::add_l3_neigh_egress(struct rtnl_neigh *n, uint32_t *l3_interface_id, int vid) {
+int nl_l3::add_l3_neigh_egress(struct rtnl_neigh *n, uint32_t *l3_interface_id, int vid, uint16_t vrf_id) {
   int rv;
   assert(n);
   int state = rtnl_neigh_get_state(n);
@@ -484,7 +484,7 @@ int nl_l3::add_l3_neigh_egress(struct rtnl_neigh *n, uint32_t *l3_interface_id, 
   auto s_mac = rtnl_link_get_addr(link.get());
 
   // XXX TODO is this still needed?
-  rv = vlan->add_vlan(link.get(), vid, tagged);
+  rv = vlan->add_vlan(link.get(), vid, tagged, vrf_id);
   if (rv < 0) {
     LOG(ERROR) << __FUNCTION__ << ": failed to setup vid ingress vid=" << vid
                << " on link " << OBJ_CAST(link.get());
@@ -532,6 +532,7 @@ int nl_l3::add_l3_neigh(struct rtnl_neigh *n) {
   uint32_t l3_interface_id = 0;
   struct nl_addr *addr;
   int family = rtnl_neigh_get_family(n);
+  uint16_t tableid = 0;
 
   rtnl_link *link = nl->get_link_by_ifindex(rtnl_neigh_get_ifindex(n));
 
@@ -545,11 +546,13 @@ int nl_l3::add_l3_neigh(struct rtnl_neigh *n) {
     int vid = rtnl_link_vlan_get_id(link);
     auto lladdr = rtnl_neigh_get_lladdr(n);
 
+    tableid = get_vrf_table_id(nl->get_link_by_ifindex(rtnl_link_get_master(link)));
+
     auto fdb_neigh = nl->search_fdb(vid, lladdr);
 
     for (auto neigh: fdb_neigh) {
       VLOG(2) << __FUNCTION__ << ": found iface=" << OBJ_CAST(neigh);
-      rv = add_l3_neigh_egress(neigh, &l3_interface_id, vid);
+      rv = add_l3_neigh_egress(neigh, &l3_interface_id, vid, tableid);
     }
   } else {
     rv = add_l3_neigh_egress(n, &l3_interface_id);
@@ -571,7 +574,7 @@ int nl_l3::add_l3_neigh(struct rtnl_neigh *n) {
       LOG(ERROR) << __FUNCTION__ << ": could not parse addr " << addr;
       return rv;
     }
-    rv = sw->l3_unicast_host_add(ipv4_dst, l3_interface_id, false, false);
+    rv = sw->l3_unicast_host_add(ipv4_dst, l3_interface_id, false, false, tableid);
   } else {
     // AF_INET6
     auto p = nl_addr_alloc(16);
@@ -587,7 +590,7 @@ int nl_l3::add_l3_neigh(struct rtnl_neigh *n) {
       LOG(ERROR) << __FUNCTION__ << ": could not parse addr " << addr;
       return rv;
     }
-    rv = sw->l3_unicast_host_add(ipv6_dst, l3_interface_id, false, false);
+    rv = sw->l3_unicast_host_add(ipv6_dst, l3_interface_id, false, false, tableid);
   }
 
   if (rv < 0) {
@@ -1258,7 +1261,7 @@ int nl_l3::get_l3_interface_id(rtnl_neigh *n, uint32_t *l3_interface_id) {
 }
 
 int nl_l3::add_l3_unicast_route(nl_addr *rt_dst, uint32_t l3_interface_id,
-                                bool is_ecmp, bool update_route) {
+                                bool is_ecmp, bool update_route, uint16_t table_id) {
   if (rt_dst == nullptr) {
     LOG(ERROR) << __FUNCTION__ << ": rt_dst cannot be nullptr";
     return -EINVAL;
@@ -1274,10 +1277,10 @@ int nl_l3::add_l3_unicast_route(nl_addr *rt_dst, uint32_t l3_interface_id,
 
     if (prefixlen == 32) {
       rv = sw->l3_unicast_host_add(ipv4_dst, l3_interface_id, is_ecmp,
-                                   update_route);
+                                   update_route, table_id);
     } else {
       rv = sw->l3_unicast_route_add(ipv4_dst, mask, l3_interface_id, is_ecmp,
-                                    update_route);
+                                    update_route, table_id);
     }
   } else if (dst_af == AF_INET6) {
     rofl::caddress_in6 ipv6_dst = libnl_in6addr_2_rofl(rt_dst, &rv);
@@ -1285,10 +1288,10 @@ int nl_l3::add_l3_unicast_route(nl_addr *rt_dst, uint32_t l3_interface_id,
 
     if (prefixlen == 128) {
       rv = sw->l3_unicast_host_add(ipv6_dst, l3_interface_id, is_ecmp,
-                                   update_route);
+                                   update_route, table_id);
     } else {
       rv = sw->l3_unicast_route_add(ipv6_dst, mask, l3_interface_id, is_ecmp,
-                                    update_route);
+                                    update_route, table_id);
     }
   } else {
     LOG(FATAL) << __FUNCTION__ << ": not reached";
@@ -1331,6 +1334,7 @@ int nl_l3::add_l3_ecmp_route(rtnl_route *r,
   assert(r);
 
   int rv = 0;
+  uint32_t table_id = rtnl_route_get_table(r);
   uint32_t l3_ecmp_id = -1;
   static uint32_t l3_ecmp_id_next = 1;
   auto it_range = l3_ecmp_mapping.equal_range(l3_interface_ids);
@@ -1370,7 +1374,7 @@ int nl_l3::add_l3_ecmp_route(rtnl_route *r,
 
   // create route
   rv = add_l3_unicast_route(rtnl_route_get_dst(r), l3_ecmp_id, true,
-                            update_route);
+                            update_route, table_id);
   if (rv < 0) {
     LOG(ERROR) << __FUNCTION__
                << ": failed to create l3 unicast route with ecmp_id="
@@ -1484,7 +1488,7 @@ int nl_l3::add_l3_unicast_route(rtnl_route *r, bool update_route) {
   if (nnhs == 1) {
     // single next hop
     rv = add_l3_unicast_route(rtnl_route_get_dst(r), *l3_interfaces.begin(),
-                              false, update_route);
+                              false, update_route, rtnl_route_get_table(r));
   } else {
     // create ecmp group
     rv = add_l3_ecmp_route(r, l3_interfaces, update_route);
@@ -1597,17 +1601,10 @@ void nl_l3::vrf_attach(rtnl_link* old_link, rtnl_link* new_link) {
   uint16_t vid = vlan->get_vid(old_link);
   rtnl_link* vrf = nl->get_link_by_ifindex(rtnl_link_get_master(new_link));
 
-  if (!rtnl_link_is_vrf(vrf)) {
-    LOG(ERROR) << __FUNCTION__ << ": no VRF interface";
-    return;
-  }
-
-  uint32_t table_id;
-  rtnl_link_vrf_get_tableid(vrf, &table_id);
-  VLOG(1) << __FUNCTION__ << ": table id=" << table_id << " vrf=" << rtnl_link_get_name(vrf);
-
+  uint16_t table_id = get_vrf_table_id(vrf);
   // get bridge ports, and rewrite VLAN with the 
   // correct VRF
+  // XXX FIND BETTER SOLUTION
   auto fdb_entries = nl->search_fdb(vid, nullptr);
   for (auto entry: fdb_entries){ 
     std::unique_ptr<rtnl_link, decltype(&rtnl_link_put)> link(
@@ -1615,6 +1612,7 @@ void nl_l3::vrf_attach(rtnl_link* old_link, rtnl_link* new_link) {
 
     vlan->remove_vlan(link.get(), vid, true);
   }
+
   for (auto entry: fdb_entries){ 
     std::unique_ptr<rtnl_link, decltype(&rtnl_link_put)> link(
         nl->get_link_by_ifindex(rtnl_neigh_get_ifindex(entry)), &rtnl_link_put);
@@ -1622,6 +1620,25 @@ void nl_l3::vrf_attach(rtnl_link* old_link, rtnl_link* new_link) {
     vlan->add_vlan(link.get(), vid, true, table_id);
   }
 
+}
+
+uint16_t nl_l3::get_vrf_table_id(rtnl_link* vrf) {
+  int rv = 0;
+  if (!rtnl_link_is_vrf(vrf)) {
+    LOG(ERROR) << __FUNCTION__ << ": no VRF interface";
+    return 0;
+  }
+
+  uint32_t tableid;
+  rv = rtnl_link_vrf_get_tableid(vrf, &tableid);
+
+  if(rv < 0) {
+    LOG(ERROR) << __FUNCTION__ << ": error fetching vrf table id";
+    return 0;
+  }
+
+  VLOG(3) << __FUNCTION__ << ": table id=" << tableid << " vrf=" << rtnl_link_get_name(vrf);
+  return tableid;
 }
 
 } // namespace basebox

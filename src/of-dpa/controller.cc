@@ -989,7 +989,7 @@ int controller::l3_egress_remove(uint32_t l3_interface_id) noexcept {
 
 int controller::l3_unicast_host_add(const rofl::caddress_in4 &ipv4_dst,
                                     uint32_t l3_interface_id, bool is_ecmp,
-                                    bool update_route) noexcept {
+                                    bool update_route, uint16_t vrf_id) noexcept {
   int rv = 0;
 
   if (l3_interface_id > 0x0fffffff)
@@ -1011,7 +1011,7 @@ int controller::l3_unicast_host_add(const rofl::caddress_in4 &ipv4_dst,
     dpt.send_flow_mod_message(
         rofl::cauxid(0),
         fm_driver.enable_ipv4_unicast_host(dpt.get_version(), ipv4_dst,
-                                           l3_interface_id, update_route));
+                                           l3_interface_id, update_route, vrf_id));
   } catch (rofl::eRofBaseNotFound &e) {
     LOG(ERROR) << ": caught rofl::eRofBaseNotFound : dptid : " << dptid;
     rv = -EINVAL;
@@ -1028,7 +1028,7 @@ int controller::l3_unicast_host_add(const rofl::caddress_in4 &ipv4_dst,
 
 int controller::l3_unicast_host_add(const rofl::caddress_in6 &ipv6_dst,
                                     uint32_t l3_interface_id, bool is_ecmp,
-                                    bool update_route) noexcept {
+                                    bool update_route, uint16_t vrf_id) noexcept {
   int rv = 0;
 
   if (l3_interface_id > 0x0fffffff)
@@ -1050,7 +1050,7 @@ int controller::l3_unicast_host_add(const rofl::caddress_in6 &ipv6_dst,
     dpt.send_flow_mod_message(
         rofl::cauxid(0),
         fm_driver.enable_ipv6_unicast_host(dpt.get_version(), ipv6_dst,
-                                           l3_interface_id, update_route));
+                                           l3_interface_id, update_route, vrf_id));
   } catch (rofl::eRofBaseNotFound &e) {
     LOG(ERROR) << ": caught rofl::eRofBaseNotFound : dptid : " << dptid;
     rv = -EINVAL;
@@ -1066,7 +1066,7 @@ int controller::l3_unicast_host_add(const rofl::caddress_in6 &ipv6_dst,
 }
 
 int controller::l3_unicast_host_remove(
-    const rofl::caddress_in4 &ipv4_dst) noexcept {
+    const rofl::caddress_in4 &ipv4_dst, uint16_t vrf_id) noexcept {
   int rv = 0;
 
   try {
@@ -1074,7 +1074,7 @@ int controller::l3_unicast_host_remove(
 
     dpt.send_flow_mod_message(
         rofl::cauxid(0),
-        fm_driver.disable_ipv4_unicast_host(dpt.get_version(), ipv4_dst));
+        fm_driver.disable_ipv4_unicast_host(dpt.get_version(), ipv4_dst, vrf_id));
     dpt.send_barrier_request(rofl::cauxid(0));
   } catch (rofl::eRofBaseNotFound &e) {
     LOG(ERROR) << ": caught rofl::eRofBaseNotFound";
@@ -1091,7 +1091,7 @@ int controller::l3_unicast_host_remove(
 }
 
 int controller::l3_unicast_host_remove(
-    const rofl::caddress_in6 &ipv6_dst) noexcept {
+    const rofl::caddress_in6 &ipv6_dst, uint16_t vrf_id) noexcept {
   int rv = 0;
 
   try {
@@ -1118,7 +1118,7 @@ int controller::l3_unicast_host_remove(
 int controller::l3_unicast_route_add(const rofl::caddress_in4 &ipv4_dst,
                                      const rofl::caddress_in4 &mask,
                                      uint32_t l3_interface_id, bool is_ecmp,
-                                     bool update_route) noexcept {
+                                     bool update_route, uint16_t vrf_id) noexcept {
   int rv = 0;
 
   if (l3_interface_id > 0x0fffffff)
@@ -1140,7 +1140,7 @@ int controller::l3_unicast_route_add(const rofl::caddress_in4 &ipv4_dst,
     dpt.send_flow_mod_message(
         rofl::cauxid(0),
         fm_driver.enable_ipv4_unicast_lpm(dpt.get_version(), ipv4_dst, mask,
-                                          l3_interface_id));
+                                          l3_interface_id, update_route, vrf_id));
   } catch (rofl::eRofBaseNotFound &e) {
     LOG(ERROR) << ": caught rofl::eRofBaseNotFound";
     rv = -EINVAL;
@@ -1158,7 +1158,7 @@ int controller::l3_unicast_route_add(const rofl::caddress_in4 &ipv4_dst,
 int controller::l3_unicast_route_add(const rofl::caddress_in6 &ipv6_dst,
                                      const rofl::caddress_in6 &mask,
                                      uint32_t l3_interface_id, bool is_ecmp,
-                                     bool update_route) noexcept {
+                                     bool update_route, uint16_t vrf_id) noexcept {
   int rv = 0;
 
   if (l3_interface_id > 0x0fffffff)
@@ -1180,7 +1180,7 @@ int controller::l3_unicast_route_add(const rofl::caddress_in6 &ipv6_dst,
     dpt.send_flow_mod_message(
         rofl::cauxid(0),
         fm_driver.enable_ipv6_unicast_lpm(dpt.get_version(), ipv6_dst, mask,
-                                          l3_interface_id));
+                                          l3_interface_id, update_route, vrf_id));
   } catch (rofl::eRofBaseNotFound &e) {
     LOG(ERROR) << ": caught rofl::eRofBaseNotFound";
     rv = -EINVAL;
@@ -1259,7 +1259,7 @@ int controller::l3_ecmp_remove(uint32_t l3_ecmp_id) noexcept {
 
 int controller::l3_unicast_route_remove(
     const rofl::caddress_in4 &ipv4_dst,
-    const rofl::caddress_in4 &mask) noexcept {
+    const rofl::caddress_in4 &mask, uint16_t  vrf_id) noexcept {
   int rv = 0;
 
   try {
@@ -1285,7 +1285,7 @@ int controller::l3_unicast_route_remove(
 
 int controller::l3_unicast_route_remove(
     const rofl::caddress_in6 &ipv6_dst,
-    const rofl::caddress_in6 &mask) noexcept {
+    const rofl::caddress_in6 &mask, uint16_t vrf_id) noexcept {
   int rv = 0;
 
   try {

@@ -16,11 +16,14 @@
 #  port2 /
 
 PORTA=${PORTA:-port1}
-PORTB=${PORTB:-port3}
+PORTB=${PORTB:-port2}
+PORTC=${PORTC:-port3}
 BRIDGE=${BRIDGE:-swbridge}
 VRF=${VRF:-red}
 VRF_TABLE_ID=${VRF_TABLE_ID:-123}
 BR_VLAN=${BR_VLAN:-100}
+SVI_IP=${SVI_IP:-10.0.100.1/24}
+NEI_IP=${NEI_IP:-10.0.100.2}
 
 function setup() {
   # vrf
@@ -41,10 +44,23 @@ function setup() {
   bridge vlan add vid ${BR_VLAN} dev ${PORTB}
   ip link set ${PORTB} up
 
+  ## port 2
+  ip link set ${PORTC} master ${BRIDGE}
+  bridge vlan add vid ${BR_VLAN} dev ${PORTC}
+  ip link set ${PORTC} up
+
   ## SVI
   ip link add link ${BRIDGE} name ${BRIDGE}.${BR_VLAN} type vlan id ${BR_VLAN}
   bridge vlan add vid ${BR_VLAN} dev ${BRIDGE} self
   ip link set ${BRIDGE}.${BR_VLAN} up
+
+  # SVI - VRF enslavement
+  ip link set ${BRIDGE}.${BR_VLAN} vrf ${VRF}
+
+  # IP Address attribution
+  ip add add ${SVI_IP} dev ${BRIDGE}.${BR_VLAN}
+  ip neigh add ${NEI_IP} dev ${BRIDGE}.${BR_VLAN} lladdr C6:6B:BF:C7:AD:52
+
 }
 
 function teardown {
