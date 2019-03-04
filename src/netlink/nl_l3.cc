@@ -1150,9 +1150,11 @@ void nl_l3::get_nexthops_of_route(
 
   // verify next hop
   for (auto nh : _nhs) {
-    int pport_id = nl->get_port_id(rtnl_route_nh_get_ifindex(nh));
+    auto ifindex = rtnl_route_nh_get_ifindex(nh);
+    int pport_id = nl->get_port_id(ifindex);
+    auto link = nl->get_link_by_ifindex(rtnl_route_nh_get_ifindex(nh));
 
-    if (pport_id == 0) {
+    if (pport_id == 0 and !nl->is_bridge_interface(link)) {
       VLOG(1) << __FUNCTION__ << ": ignoring next hop " << nh;
       continue;
     }
@@ -1429,6 +1431,7 @@ int nl_l3::del_l3_ecmp_route(rtnl_route *r,
 int nl_l3::add_l3_unicast_route(rtnl_route *r, bool update_route) {
   assert(r);
   int nnhs = rtnl_route_get_nnexthops(r);
+  uint32_t table_id = rtnl_route_get_table(r);
 
   if (nnhs == 0) {
     LOG(WARNING) << __FUNCTION__ << ": no neighbours of route " << OBJ_CAST(r);
@@ -1460,7 +1463,18 @@ int nl_l3::add_l3_unicast_route(rtnl_route *r, bool update_route) {
   std::set<uint32_t> l3_interfaces; // all create l3 interface ids
   for (auto n : neighs) {
     uint32_t l3_interface_id = 0;
+    auto ifindex = rtnl_neigh_get_ifindex(n);
+
+    // For the Bridge SVI, the l3 interface already exists
+    // so we can just get that one
+    if (nl->is_bridge_interface(ifindex)) {
+      auto fdb_res = nl->search_fdb(0, rtnl_neigh_get_lladdr(n));
+      get_l3_interface_id(fdb_res.front(), &l3_interface_id);
+      l3_interfaces.emplace(l3_interface_id);
+      continue;
+    }
     // add neigh
+
     rv = add_l3_neigh_egress(n, &l3_interface_id);
 
     if (rv < 0) {
@@ -1488,7 +1502,7 @@ int nl_l3::add_l3_unicast_route(rtnl_route *r, bool update_route) {
   if (nnhs == 1) {
     // single next hop
     rv = add_l3_unicast_route(rtnl_route_get_dst(r), *l3_interfaces.begin(),
-                              false, update_route, rtnl_route_get_table(r));
+                              false, update_route, table_id);
   } else {
     // create ecmp group
     rv = add_l3_ecmp_route(r, l3_interfaces, update_route);

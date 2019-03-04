@@ -381,8 +381,10 @@ std::deque<rtnl_neigh *> nl_bridge::get_fdb_entries_of_port(rtnl_link *br_port,
 
   rtnl_neigh_set_ifindex(filter.get(), rtnl_link_get_ifindex(br_port));
   rtnl_neigh_set_master(filter.get(), rtnl_link_get_ifindex(bridge));
-  rtnl_neigh_set_vlan(filter.get(), vid);
   rtnl_neigh_set_family(filter.get(), AF_BRIDGE);
+
+  if (vid)
+    rtnl_neigh_set_vlan(filter.get(), vid);
 
   if (lladdr)
     rtnl_neigh_set_lladdr(filter.get(), lladdr);

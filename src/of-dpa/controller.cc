@@ -1362,7 +1362,6 @@ int controller::ingress_port_vlan_add(uint32_t port, uint16_t vid,
           rofl::cauxid(0),
           fm_driver.enable_port_pvid_ingress(dpt.get_version(), port, vid));
     } else {
-      LOG(INFO) << ": VRF " << vrf_id;
       dpt.send_flow_mod_message(
           rofl::cauxid(0),
           fm_driver.enable_port_vid_ingress(dpt.get_version(), port, vid, vrf_id));

@@ -302,6 +302,10 @@ struct rtnl_neigh *cnetlink::get_neighbour(int ifindex,
   return rtnl_neigh_get(caches[NL_NEIGH_CACHE], ifindex, a);
 }
 
+bool cnetlink::is_bridge_interface(uint32_t ifaceid) const {
+  return is_bridge_interface(get_link_by_ifindex(ifaceid));
+}
+
 bool cnetlink::is_bridge_interface(rtnl_link *l) const {
 
   // is a vlan on top of the bridge?

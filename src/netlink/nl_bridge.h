@@ -59,7 +59,7 @@ public:
 
   // XXX Improve cache search mechanism
   std::deque<rtnl_neigh *> get_fdb_entries_of_port(rtnl_link *br_port,
-                                                   uint16_t vid,
+                                                   uint16_t vid=0,
                                                    nl_addr *lladdr = nullptr);
 
   void get_bridge_ports(
