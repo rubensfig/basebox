@@ -1302,7 +1302,7 @@ int nl_l3::add_l3_unicast_route(nl_addr *rt_dst, uint32_t l3_interface_id,
   return rv;
 }
 
-int nl_l3::del_l3_unicast_route(nl_addr *rt_dst) {
+int nl_l3::del_l3_unicast_route(nl_addr *rt_dst, uint16_t vrf_id) {
   int rv;
   // remove route pointing to group
   int prefixlen = nl_addr_get_prefixlen(rt_dst);
@@ -1311,19 +1311,19 @@ int nl_l3::del_l3_unicast_route(nl_addr *rt_dst) {
     rofl::caddress_in4 ipv4_dst = libnl_in4addr_2_rofl(rt_dst, &rv);
 
     if (prefixlen == 32) {
-      rv = sw->l3_unicast_host_remove(ipv4_dst);
+      rv = sw->l3_unicast_host_remove(ipv4_dst, vrf_id);
     } else {
       rofl::caddress_in4 mask = rofl::build_mask_in4(prefixlen);
-      rv = sw->l3_unicast_route_remove(ipv4_dst, mask);
+      rv = sw->l3_unicast_route_remove(ipv4_dst, mask, vrf_id);
     }
   } else {
     rofl::caddress_in6 ipv6_dst = libnl_in6addr_2_rofl(rt_dst, &rv);
 
     if (prefixlen == 128) {
-      rv = sw->l3_unicast_host_remove(ipv6_dst);
+      rv = sw->l3_unicast_host_remove(ipv6_dst, vrf_id);
     } else {
       rofl::caddress_in6 mask = rofl::build_mask_in6(prefixlen);
-      rv = sw->l3_unicast_route_remove(ipv6_dst, mask);
+      rv = sw->l3_unicast_route_remove(ipv6_dst, mask, vrf_id);
     }
   }
 
@@ -1534,9 +1534,10 @@ int nl_l3::update_l3_unicast_route(rtnl_route *r_old, rtnl_route *r_new) {
 int nl_l3::del_l3_unicast_route(rtnl_route *r, bool keep_route) {
   int rv = 0;
   auto dst = rtnl_route_get_dst(r);
+  uint32_t table_id = rtnl_route_get_table(r);
 
   if (!keep_route) {
-    rv = del_l3_unicast_route(dst);
+    rv = del_l3_unicast_route(dst, table_id);
     if (rv < 0) {
       LOG(ERROR) << __FUNCTION__ << ": failed to remove dst=" << dst;
       // fallthrough
@@ -1560,6 +1561,16 @@ int nl_l3::del_l3_unicast_route(rtnl_route *r, bool keep_route) {
     std::set<uint32_t> l3_interfaces; // all create l3 interface ids
     for (auto n : neighs) {
       uint32_t l3_interface_id = 0;
+      auto ifindex = rtnl_neigh_get_ifindex(n);
+
+      // For the Bridge SVI, the l3 interface already exists
+      // so we can just get that one
+      if (nl->is_bridge_interface(ifindex)) {
+        auto fdb_res = nl->search_fdb(0, rtnl_neigh_get_lladdr(n));
+        get_l3_interface_id(fdb_res.front(), &l3_interface_id);
+        l3_interfaces.emplace(l3_interface_id);
+        continue;
+      }
       // add neigh
       rv = get_l3_interface_id(n, &l3_interface_id);
 

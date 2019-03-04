@@ -82,7 +82,7 @@ private:
   int add_l3_unicast_route(nl_addr *rt_dst, uint32_t l3_interface_id,
                            bool is_ecmp, bool update_route,
                            uint16_t table_id = 0);
-  int del_l3_unicast_route(nl_addr *rt_dst);
+  int del_l3_unicast_route(nl_addr *rt_dst, uint16_t vrf_id = 0);
 
   int add_l3_ecmp_route(rtnl_route *r,
                         const std::set<uint32_t> &l3_interface_ids,
