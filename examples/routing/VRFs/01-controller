@@ -9,6 +9,9 @@
 
 # For more information, consult the VRF documentation inside the 
 # Linux Kernel in: https://www.kernel.org/doc/Documentation/networking/vrf.txt
+# FRR configuration present in: 
+# https://gist.github.com/rubensfig/ef4a8663ad0c13639ffc78ac2ec62f6c
+
 # With the following physical topology:
 
 # +--------+       +------------+
