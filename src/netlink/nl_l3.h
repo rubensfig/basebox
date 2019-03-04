@@ -52,7 +52,7 @@ public:
   int update_l3_route(struct rtnl_route *r_old, struct rtnl_route *r_new);
   int del_l3_route(struct rtnl_route *r);
 
-  void vrf_attach(rtnl_link* old_link, rtnl_link* new_link);
+  void vrf_attach(rtnl_link *old_link, rtnl_link *new_link);
 
   void get_nexthops_of_route(rtnl_route *route,
                              std::deque<struct rtnl_nexthop *> *nhs) noexcept;
@@ -80,7 +80,8 @@ private:
   int del_l3_unicast_route(rtnl_route *r, bool keep_route);
 
   int add_l3_unicast_route(nl_addr *rt_dst, uint32_t l3_interface_id,
-                           bool is_ecmp, bool update_route, uint16_t table_id =0);
+                           bool is_ecmp, bool update_route,
+                           uint16_t table_id = 0);
   int del_l3_unicast_route(nl_addr *rt_dst);
 
   int add_l3_ecmp_route(rtnl_route *r,
@@ -90,7 +91,7 @@ private:
                         const std::set<uint32_t> &l3_interface_ids);
 
   int add_l3_neigh_egress(struct rtnl_neigh *n, uint32_t *l3_interface_id,
-                          int vid = 0, uint16_t vrf_id=0);
+                          int vid = 0, uint16_t vrf_id = 0);
   int del_l3_neigh_egress(struct rtnl_neigh *n);
 
   int add_l3_egress(int ifindex, const uint16_t vid,
@@ -100,7 +101,7 @@ private:
                     const struct nl_addr *d_mac);
 
   bool is_link_local_address(const struct nl_addr *addr);
-  uint16_t get_vrf_table_id(rtnl_link* vrf);
+  uint16_t get_vrf_table_id(rtnl_link *vrf);
 
   switch_interface *sw;
   std::shared_ptr<nl_vlan> vlan;

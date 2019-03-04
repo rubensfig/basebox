@@ -1280,12 +1280,12 @@ bool cnetlink::is_bridge_configured(rtnl_link *l) {
   return bridge->is_bridge_interface(l);
 }
 
-std::deque<rtnl_neigh* > cnetlink::search_fdb(uint32_t vid, nl_addr* lladdr) {
+std::deque<rtnl_neigh *> cnetlink::search_fdb(uint32_t vid, nl_addr *lladdr) {
   std::deque<rtnl_link *> br_ports;
   get_bridge_ports(bridge->get_ifindex(), &br_ports);
 
-  std::deque<rtnl_neigh*> fdb_entries;
-  for (auto port: br_ports) {
+  std::deque<rtnl_neigh *> fdb_entries;
+  for (auto port : br_ports) {
     auto fdb = bridge->get_fdb_entries_of_port(port, vid, lladdr);
 
     std::copy(fdb.begin(), fdb.end(), std::back_inserter(fdb_entries));
