@@ -982,6 +982,13 @@ void cnetlink::link_updated(rtnl_link *old_link, rtnl_link *new_link) noexcept {
               << OBJ_CAST(get_link_by_ifindex(rtnl_link_get_master(new_link)));
     l3->vrf_attach(old_link, new_link);
     break;
+  case LT_VRF_SLAVE:
+    if (lt_new != LT_VLAN) {
+      return;
+    }
+    VLOG(1) << __FUNCTION__ << ": freed vrf slave interface " << OBJ_CAST(old_link);
+    l3->vrf_detach(old_link, new_link);
+    break;
   case LT_TUN:
     if (lt_new == LT_BOND_SLAVE) {
       // XXX link enslaved
@@ -991,14 +998,13 @@ void cnetlink::link_updated(rtnl_link *old_link, rtnl_link *new_link) noexcept {
       bond->add_lag_member(_bond, new_link);
     } else if (lt_new == LT_VRF_SLAVE) {
       LOG(INFO) << __FUNCTION__ << ": link enslaved "
-                << rtnl_link_get_name(new_link);
+                << rtnl_link_get_name(new_link) << " but not handled";
     }
     break;
     /* fallthrough */
   case LT_VRF: // No need to care about the vrf interface itself
   case LT_BOND:
   case LT_BRIDGE:
-  case LT_VRF_SLAVE:
   case LT_UNSUPPORTED:
     VLOG(2) << __FUNCTION__
             << ": ignoring update (not supported) of old_lt=" << lt_old
@@ -1062,6 +1068,7 @@ void cnetlink::link_deleted(rtnl_link *link) noexcept {
     VLOG(1) << __FUNCTION__ << ": removed bond interface " << OBJ_CAST(link);
     bond->remove_lag(link);
   } break;
+  case LT_VRF:
   default:
     LOG(ERROR) << __FUNCTION__ << ": link type not handled " << lt;
     break;

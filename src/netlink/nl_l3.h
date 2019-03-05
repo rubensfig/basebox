@@ -53,6 +53,7 @@ public:
   int del_l3_route(struct rtnl_route *r);
 
   void vrf_attach(rtnl_link *old_link, rtnl_link *new_link);
+  void vrf_detach(rtnl_link *old_link, rtnl_link *new_link);
 
   void get_nexthops_of_route(rtnl_route *route,
                              std::deque<struct rtnl_nexthop *> *nhs) noexcept;

@@ -544,11 +544,10 @@ int nl_l3::add_l3_neigh(struct rtnl_neigh *n) {
   // the egress entries for the Bridge SVIs are the ports
   // attached to the bridge
   if (nl->is_bridge_interface(link)) {
-    int vid = rtnl_link_vlan_get_id(link);
+    int vid = vlan->get_vid(link);
     auto lladdr = rtnl_neigh_get_lladdr(n);
 
-    tableid =
-        get_vrf_table_id(nl->get_link_by_ifindex(rtnl_link_get_master(link)));
+    tableid = get_vrf_table_id(link);
 
     auto fdb_neigh = nl->search_fdb(vid, lladdr);
 
@@ -1535,9 +1534,7 @@ int nl_l3::del_l3_unicast_route(rtnl_route *r, bool keep_route) {
   auto dst = rtnl_route_get_dst(r);
   uint32_t table_id = rtnl_route_get_table(r);
 
-  VLOG(1) << " DELETE THIS " << !keep_route;
   if (!keep_route) {
-    VLOG(1) << " HERE ";
     rv = del_l3_unicast_route(dst, table_id);
     if (rv < 0) {
       LOG(ERROR) << __FUNCTION__ << ": failed to remove dst=" << dst;
@@ -1646,14 +1643,36 @@ void nl_l3::vrf_attach(rtnl_link *old_link, rtnl_link *new_link) {
   }
 }
 
+void nl_l3::vrf_detach(rtnl_link *old_link, rtnl_link *new_link) {
+  assert(link);
+
+  uint16_t vid = vlan->get_vid(new_link);
+
+  uint16_t table_id = get_vrf_table_id(old_link);
+  auto fdb_entries = nl->search_fdb(vid, nullptr);
+  for (auto entry : fdb_entries) {
+    std::unique_ptr<rtnl_link, decltype(&rtnl_link_put)> link(
+        nl->get_link_by_ifindex(rtnl_neigh_get_ifindex(entry)), &rtnl_link_put);
+
+    vlan->remove_vlan(link.get(), vid, true, table_id);
+  }
+
+  for (auto entry : fdb_entries) {
+    std::unique_ptr<rtnl_link, decltype(&rtnl_link_put)> link(
+        nl->get_link_by_ifindex(rtnl_neigh_get_ifindex(entry)), &rtnl_link_put);
+
+    vlan->add_vlan(link.get(), vid, true);
+  }
+}
+
 uint16_t nl_l3::get_vrf_table_id(rtnl_link *link) {
   int rv = 0;
 
   auto vrf = nl->get_link_by_ifindex(rtnl_link_get_master(link));
-  if (!rtnl_link_is_vrf(link) and rtnl_link_is_vrf(vrf)) {
+  if (!rtnl_link_is_vrf(link) and vrf and rtnl_link_is_vrf(vrf)) {
     link = vrf;
-  } else if (!rtnl_link_is_vrf(link) and rtnl_link_is_vrf(vrf)) {
-    LOG(ERROR) << __FUNCTION__ << ": no VRF interface";
+  } else if (!rtnl_link_is_vrf(link) and !vrf) {
+    VLOG(2) << __FUNCTION__ << ": no VRF interface";
     return 0;
   }
 
