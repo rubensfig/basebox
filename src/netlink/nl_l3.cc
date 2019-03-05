@@ -373,6 +373,8 @@ int nl_l3::del_l3_addr(struct rtnl_addr *a) {
 
   int rv = 0;
   int family = rtnl_addr_get_family(a);
+  struct rtnl_link *link = rtnl_addr_get_link(a);
+  auto vrf_id = get_vrf_table_id(link);
 
   if (a == nullptr) {
     LOG(ERROR) << __FUNCTION__ << ": addr can't be null";
@@ -380,7 +382,6 @@ int nl_l3::del_l3_addr(struct rtnl_addr *a) {
   }
 
   struct nl_addr *addr = rtnl_addr_get_local(a);
-
   int prefixlen = nl_addr_get_prefixlen(addr);
 
   // XXX TODO remove vlan
@@ -393,10 +394,10 @@ int nl_l3::del_l3_addr(struct rtnl_addr *a) {
     }
 
     if (prefixlen == 32) {
-      rv = sw->l3_unicast_host_remove(ipv4_dst);
+      rv = sw->l3_unicast_host_remove(ipv4_dst, vrf_id);
     } else {
       rofl::caddress_in4 mask = rofl::build_mask_in4(prefixlen);
-      rv = sw->l3_unicast_route_remove(ipv4_dst, mask);
+      rv = sw->l3_unicast_route_remove(ipv4_dst, mask, vrf_id);
     }
   } else {
     assert(family == AF_INET6);
@@ -407,14 +408,13 @@ int nl_l3::del_l3_addr(struct rtnl_addr *a) {
     }
 
     if (prefixlen == 128) {
-      rv = sw->l3_unicast_host_remove(ipv6_dst);
+      rv = sw->l3_unicast_host_remove(ipv6_dst, vrf_id);
     } else {
       rofl::caddress_in6 mask = rofl::build_mask_in6(prefixlen);
-      rv = sw->l3_unicast_route_remove(ipv6_dst, mask);
+      rv = sw->l3_unicast_route_remove(ipv6_dst, mask, vrf_id);
     }
   }
 
-  struct rtnl_link *link = rtnl_addr_get_link(a);
   if (link == nullptr) {
     LOG(ERROR) << __FUNCTION__ << ": no link for addr a=" << a;
     return -EINVAL;
@@ -513,7 +513,6 @@ int nl_l3::del_l3_neigh_egress(struct rtnl_neigh *n) {
     return -EINVAL;
 
   uint16_t vid = vlan->get_vid(link.get());
-  // bool tagged = !!rtnl_link_is_vlan(link.get());
   auto s_mac = rtnl_link_get_addr(link.get());
 
   // XXX TODO del vlan
@@ -542,7 +541,7 @@ int nl_l3::add_l3_neigh(struct rtnl_neigh *n) {
     return -EINVAL;
 
   // Handle the Bridge SVI
-  // the egress entry for the Bridge SVI is one of the ports
+  // the egress entries for the Bridge SVIs are the ports
   // attached to the bridge
   if (nl->is_bridge_interface(link)) {
     int vid = rtnl_link_vlan_get_id(link);
@@ -1626,9 +1625,8 @@ void nl_l3::vrf_attach(rtnl_link *old_link, rtnl_link *new_link) {
   assert(link);
 
   uint16_t vid = vlan->get_vid(old_link);
-  rtnl_link *vrf = nl->get_link_by_ifindex(rtnl_link_get_master(new_link));
 
-  uint16_t table_id = get_vrf_table_id(vrf);
+  uint16_t table_id = get_vrf_table_id(new_link);
   // get bridge ports, and rewrite VLAN with the
   // correct VRF
   // XXX FIND BETTER SOLUTION
@@ -1648,15 +1646,19 @@ void nl_l3::vrf_attach(rtnl_link *old_link, rtnl_link *new_link) {
   }
 }
 
-uint16_t nl_l3::get_vrf_table_id(rtnl_link *vrf) {
+uint16_t nl_l3::get_vrf_table_id(rtnl_link *link) {
   int rv = 0;
-  if (!rtnl_link_is_vrf(vrf)) {
+
+  auto vrf = nl->get_link_by_ifindex(rtnl_link_get_master(link));
+  if (!rtnl_link_is_vrf(link) and rtnl_link_is_vrf(vrf)) {
+    link = vrf;
+  } else if (!rtnl_link_is_vrf(link) and rtnl_link_is_vrf(vrf)) {
     LOG(ERROR) << __FUNCTION__ << ": no VRF interface";
     return 0;
   }
 
   uint32_t tableid;
-  rv = rtnl_link_vrf_get_tableid(vrf, &tableid);
+  rv = rtnl_link_vrf_get_tableid(link, &tableid);
 
   if (rv < 0) {
     LOG(ERROR) << __FUNCTION__ << ": error fetching vrf table id";
@@ -1664,7 +1666,7 @@ uint16_t nl_l3::get_vrf_table_id(rtnl_link *vrf) {
   }
 
   VLOG(3) << __FUNCTION__ << ": table id=" << tableid
-          << " vrf=" << rtnl_link_get_name(vrf);
+          << " vrf=" << rtnl_link_get_name(link);
   return tableid;
 }
 
