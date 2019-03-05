@@ -1271,7 +1271,7 @@ int controller::l3_unicast_route_remove(const rofl::caddress_in4 &ipv4_dst,
 
     dpt.send_flow_mod_message(
         rofl::cauxid(0),
-        fm_driver.disable_ipv4_unicast_lpm(dpt.get_version(), ipv4_dst, mask));
+        fm_driver.disable_ipv4_unicast_lpm(dpt.get_version(), ipv4_dst, mask, vrf_id));
     dpt.send_barrier_request(rofl::cauxid(0));
   } catch (rofl::eRofBaseNotFound &e) {
     LOG(ERROR) << ": caught rofl::eRofBaseNotFound";
@@ -1297,7 +1297,7 @@ int controller::l3_unicast_route_remove(const rofl::caddress_in6 &ipv6_dst,
 
     dpt.send_flow_mod_message(
         rofl::cauxid(0),
-        fm_driver.disable_ipv6_unicast_lpm(dpt.get_version(), ipv6_dst, mask));
+        fm_driver.disable_ipv6_unicast_lpm(dpt.get_version(), ipv6_dst, mask, vrf_id));
     dpt.send_barrier_request(rofl::cauxid(0));
   } catch (rofl::eRofBaseNotFound &e) {
     LOG(ERROR) << ": caught rofl::eRofBaseNotFound";

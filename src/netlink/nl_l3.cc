@@ -1536,7 +1536,9 @@ int nl_l3::del_l3_unicast_route(rtnl_route *r, bool keep_route) {
   auto dst = rtnl_route_get_dst(r);
   uint32_t table_id = rtnl_route_get_table(r);
 
+  VLOG(1) << " DELETE THIS " << !keep_route;
   if (!keep_route) {
+    VLOG(1) << " HERE ";
     rv = del_l3_unicast_route(dst, table_id);
     if (rv < 0) {
       LOG(ERROR) << __FUNCTION__ << ": failed to remove dst=" << dst;
