@@ -80,17 +80,17 @@ function setup() {
   bridge vlan add vid ${BR_VLAN} dev ${PORTA}
   ip link set ${PORTA} up
 
-  ## port 1
+  ## port 2
   ip link set ${PORTD} master ${BRIDGE}
   bridge vlan add vid ${BR_VLAN} dev ${PORTD}
   ip link set ${PORTD} up
 
-  ## port 2
+  ## port 3
   ip link set ${PORTB} master ${BRIDGE}
   bridge vlan add vid ${BR_VLAN2} dev ${PORTB}
   ip link set ${PORTB} up
 
-  ## port 2
+  ## port 4
   ip link set ${PORTC} master ${BRIDGE}
   bridge vlan add vid ${BR_VLAN3} dev ${PORTC}
   ip link set ${PORTC} up
