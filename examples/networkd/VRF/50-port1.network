@@ -1,0 +1,9 @@
+[Match]
+Name=port1
+
+[Network]
+Bridge=swbridge
+
+[BridgeVLAN]
+VLAN=1
+VLAN=10

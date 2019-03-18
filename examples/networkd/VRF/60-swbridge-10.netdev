@@ -1,0 +1,6 @@
+[NetDev]
+Name=swbridge.10
+Kind=vlan
+ 
+[VLAN]
+Id=10

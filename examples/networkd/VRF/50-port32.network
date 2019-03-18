@@ -1,0 +1,9 @@
+[Match]
+Name=port32
+
+[Network]
+Bridge=swbridge
+
+[BridgeVLAN]
+VLAN=1
+VLAN=30

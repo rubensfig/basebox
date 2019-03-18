@@ -1,0 +1,6 @@
+[NetDev]
+Name=swbridge.20
+Kind=vlan
+ 
+[VLAN]
+Id=20

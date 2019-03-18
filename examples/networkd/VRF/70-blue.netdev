@@ -1,0 +1,6 @@
+[NetDev]
+Name=blue
+Kind=vrf
+
+[VRF]
+Table=20

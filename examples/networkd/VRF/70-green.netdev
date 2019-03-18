@@ -1,0 +1,6 @@
+[NetDev]
+Name=green
+Kind=vrf
+
+[VRF]
+Table=30

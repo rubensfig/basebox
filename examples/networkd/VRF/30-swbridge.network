@@ -1,0 +1,12 @@
+[Match]
+Name=swbridge
+
+[Network]
+VLAN=swbridge.10
+VLAN=swbridge.20
+VLAN=swbridge.30
+
+[BridgeVLAN]
+VLAN=10
+VLAN=20
+VLAN=30

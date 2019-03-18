@@ -1,0 +1,9 @@
+[Match]
+Name=port35
+
+[Network]
+Bridge=swbridge
+
+[BridgeVLAN]
+VLAN=1
+VLAN=20

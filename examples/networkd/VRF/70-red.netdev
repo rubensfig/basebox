@@ -1,0 +1,6 @@
+[NetDev]
+Name=red
+Kind=vrf
+
+[VRF]
+Table=10

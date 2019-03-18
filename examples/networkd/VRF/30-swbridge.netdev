@@ -1,0 +1,7 @@
+[NetDev]
+Name=swbridge
+Kind=bridge
+
+[Bridge]
+VLANFiltering=1
+ForwardDelaySec=2

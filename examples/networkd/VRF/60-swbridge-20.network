@@ -1,0 +1,6 @@
+[Match]
+Name=swbridge.20
+
+[Network]
+VRF=blue
+Address=10.0.20.1/24
