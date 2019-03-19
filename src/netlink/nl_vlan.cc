@@ -57,7 +57,7 @@ int nl_vlan::add_vlan(rtnl_link *link, uint16_t vid, bool tagged) {
   auto key = std::make_pair(port_id, vid);
   auto refcount = vlan_port.find(key);
   if (refcount == vlan_port.end()) {
-    vlan_port.emplace(key, 0);
+    vlan_port.emplace(key, 1);
   } else
     refcount->second++;
 
@@ -87,7 +87,7 @@ int nl_vlan::remove_vlan(rtnl_link *link, uint16_t vid, bool tagged) {
   if (refcount != vlan_port.end()) {
     refcount->second--;
     return rv;
-  } else if (key.second == 0)
+  } else if (key.second == 1)
     vlan_port.erase(refcount);
 
   // remove vid at ingress
