@@ -1742,6 +1742,17 @@ int controller::subscribe_to(enum swi_flags flags) noexcept {
         rofl::cauxid(0), fm_driver.enable_policy_ipv4_multicast(
                              dpt.get_version(), rofl::caddress_in4("224.0.0.0"),
                              rofl::build_mask_in4(24)));
+
+    auto version = dpt.get_version();
+    rofl::openflow::cofmatch match(version);
+    match.set_eth_type(0xa8c8);
+    rofl::openflow::cofactions apply(version);
+    apply.add_action_output(rofl::cindex(0)).set_port_no(rofl::openflow13::OFPP_CONTROLLER);
+    rofl::openflow::cofactions write(version);
+
+    dpt.send_flow_mod_message(
+        rofl::cauxid(0), fm_driver.enable_policy_acl_ipv4_vlan(
+                             dpt.get_version(), match, false, 0, 0, 1, apply, write));
   } catch (rofl::eRofBaseNotFound &e) {
     LOG(ERROR) << ": caught rofl::eRofBaseNotFound";
     rv = -EINVAL;
