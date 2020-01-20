@@ -770,4 +770,9 @@ void nl_bridge::clear_tpid_entries() {
     sw->delete_egress_tpid(nl->get_port_id(iface));
 }
 
+void nl_bridge::get_mdb_entries() {
+  VLOG(1) << " HERE ";
+
+}
+
 } /* namespace basebox */

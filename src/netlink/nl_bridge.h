@@ -84,6 +84,9 @@ private:
                            const uint16_t vid, const uint32_t tunnel_id,
                            const std::deque<rtnl_link *> &bridge_ports,
                            bool add);
+
+  void get_mdb_entries();
+
   rtnl_link *bridge;
   switch_interface *sw;
   std::shared_ptr<tap_manager> tap_man;

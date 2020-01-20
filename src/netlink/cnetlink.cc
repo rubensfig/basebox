@@ -423,6 +423,9 @@ void cnetlink::handle_wakeup(rofl::cthread &thread) {
     case RTM_DELADDR:
       route_addr_apply(obj);
       break;
+    case RTM_NEWMDB:
+      VLOG(1) << " NEW MDB ";
+      break;
     default:
       LOG(ERROR) << __FUNCTION__ << ": unexpected netlink type "
                  << obj.get_msg_type();
@@ -687,7 +690,7 @@ void cnetlink::route_link_apply(const nl_obj &obj) {
     case NL_ACT_NEW:
       assert(obj.get_new_obj());
 
-      VLOG(2) << __FUNCTION__ << ": new link " << obj.get_new_obj();
+      VLOG(1) << __FUNCTION__ << ": new link " << obj.get_new_obj();
 
       link_created(LINK_CAST(obj.get_new_obj()));
       break;

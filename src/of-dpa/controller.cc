@@ -176,20 +176,20 @@ void controller::handle_features_reply(
 void controller::handle_barrier_reply(
     rofl::crofdpt &dpt, const rofl::cauxid &auxid,
     rofl::openflow::cofmsg_barrier_reply &msg) {
-  VLOG(1) << __FUNCTION__ << ": dpt=" << dpt << ", auxid=" << auxid
+  VLOG(3) << __FUNCTION__ << ": dpt=" << dpt << ", auxid=" << auxid
           << ", xid=" << std::showbase << std::hex << (unsigned)msg.get_xid();
 }
 
 void controller::handle_barrier_reply_timeout(rofl::crofdpt &dpt,
                                               uint32_t xid) {
-  VLOG(1) << __FUNCTION__ << ": dpt=" << dpt << ", xid=" << std::showbase
+  VLOG(3) << __FUNCTION__ << ": dpt=" << dpt << ", xid=" << std::showbase
           << std::hex << (unsigned)xid;
 }
 
 void controller::handle_desc_stats_reply(
     rofl::crofdpt &dpt, const rofl::cauxid &auxid,
     rofl::openflow::cofmsg_desc_stats_reply &msg) {
-  VLOG(1) << __FUNCTION__ << ": dpt=" << dpt << " on auxid=" << auxid
+  VLOG(3) << __FUNCTION__ << ": dpt=" << dpt << " on auxid=" << auxid
           << " msg: " << msg;
 
   // TODO evaluate switch here?
@@ -200,7 +200,7 @@ void controller::handle_desc_stats_reply(
 
 void controller::handle_packet_in(rofl::crofdpt &dpt, const rofl::cauxid &auxid,
                                   rofl::openflow::cofmsg_packet_in &msg) {
-  VLOG(1) << __FUNCTION__ << ": dpt=" << dpt << " on auxid=" << auxid;
+  VLOG(3) << __FUNCTION__ << ": dpt=" << dpt << " on auxid=" << auxid;
   VLOG(3) << __FUNCTION__ << ": dpid=" << dpt.get_dpid()
           << " received: " << std::endl
           << msg;
@@ -251,7 +251,7 @@ void controller::handle_port_status(rofl::crofdpt &dpt,
 void controller::handle_error_message(rofl::crofdpt &dpt,
                                       const rofl::cauxid &auxid,
                                       rofl::openflow::cofmsg_error &msg) {
-  VLOG(1) << __FUNCTION__ << ": dpt=" << dpt << " on auxid=" << auxid;
+  VLOG(3) << __FUNCTION__ << ": dpt=" << dpt << " on auxid=" << auxid;
   VLOG(3) << __FUNCTION__ << ": dpid=" << dpt.get_dpid()
           << " pkt received: " << std::endl
           << msg;
