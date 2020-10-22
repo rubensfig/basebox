@@ -383,7 +383,7 @@ void nl_bridge::update_vlans(rtnl_link *old_link, rtnl_link *new_link) {
               for (auto mem : members) {
                 sw->egress_bridge_port_vlan_add(mem, vid, egress_untagged);
                 sw->ingress_port_vlan_add(mem, vid, new_br_vlan->pvid == vid);
-	      }
+              }
             }
           }
         } else {
