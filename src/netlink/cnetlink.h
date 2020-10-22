@@ -54,6 +54,8 @@ public:
    */
   struct rtnl_neigh *get_neighbour(int ifindex, struct nl_addr *a) const;
 
+  int get_l3_addr(struct rtnl_link *link, std::deque<rtnl_addr *> *addresses);
+
   bool is_bridge_interface(rtnl_link *l) const;
   bool is_bridge_interface(int ifindex) const;
   bool is_bridge_configured(rtnl_link *l);
@@ -75,6 +77,8 @@ public:
                        void *data);
 
   void set_tapmanager(std::shared_ptr<tap_manager> tm);
+
+  int add_l3_addr(struct rtnl_addr *a);
 
   int send_nl_msg(nl_msg *msg);
   void learn_l2(uint32_t port_id, int fd, packet *pkt);

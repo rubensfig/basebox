@@ -321,6 +321,37 @@ std::set<uint32_t> cnetlink::get_bond_members_by_lag(rtnl_link *bond_link) {
   return bond->get_members(bond_link);
 }
 
+int cnetlink::get_l3_addr(struct rtnl_link *link,
+                          std::deque<rtnl_addr *> *addresses) {
+  std::unique_ptr<rtnl_addr, decltype(&rtnl_addr_put)> filter(rtnl_addr_alloc(),
+                                                              rtnl_addr_put);
+
+  rtnl_addr_set_ifindex(filter.get(), rtnl_link_get_ifindex(link));
+
+  nl_cache_foreach_filter(
+      get_cache(cnetlink::NL_ADDR_CACHE), OBJ_CAST(filter.get()),
+      [](struct nl_object *o, void *arg) {
+        auto *addr = (std::deque<rtnl_addr *> *)arg;
+        addr->push_back(ADDR_CAST(o));
+      },
+      addresses);
+
+  return 0;
+}
+
+int cnetlink::add_l3_addr(struct rtnl_addr *a) {
+  switch (rtnl_addr_get_family(a)) {
+  case AF_INET:
+    return l3->add_l3_addr(a);
+  case AF_INET6:
+    return l3->add_l3_addr_v6(a);
+  default:
+    LOG(ERROR) << __FUNCTION__ << ": unsupported family ";
+    break;
+  }
+  return -EINVAL;
+}
+
 struct rtnl_neigh *cnetlink::get_neighbour(int ifindex,
                                            struct nl_addr *a) const {
   assert(ifindex);
@@ -1002,6 +1033,7 @@ void cnetlink::link_updated(rtnl_link *old_link, rtnl_link *new_link) noexcept {
   case LT_BOND_SLAVE:
     if (lt_new == LT_BOND_SLAVE) { // bond slave updated
       bond->update_lag_member(old_link, new_link);
+      bond->configure_l3_address(new_link);
     } else if (lt_new == LT_TUN) { // bond slave removed
       bond->remove_lag_member(old_link);
     }
@@ -1044,6 +1076,7 @@ void cnetlink::link_updated(rtnl_link *old_link, rtnl_link *new_link) noexcept {
                 << rtnl_link_get_name(new_link);
       rtnl_link *_bond = get_link(rtnl_link_get_master(new_link), AF_UNSPEC);
       bond->add_lag_member(_bond, new_link);
+      bond->configure_l3_address(new_link);
 
       LOG(INFO) << __FUNCTION__ << " set active member " << get_port_id(_bond)
                 << " port id " << rtnl_link_get_ifindex(new_link);

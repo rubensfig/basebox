@@ -50,6 +50,8 @@ public:
   int remove_lag_member(rtnl_link *link);
   int update_lag(rtnl_link *old_link, rtnl_link *new_link);
 
+  int configure_l3_address(rtnl_link *link);
+
   int update_lag_member(rtnl_link *old_slave, rtnl_link *new_slave);
 
 private:

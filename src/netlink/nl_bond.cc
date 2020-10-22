@@ -297,4 +297,21 @@ int nl_bond::update_lag_member(rtnl_link *old_slave, rtnl_link *new_slave) {
   return 0;
 }
 
+int nl_bond::configure_l3_address(rtnl_link *link) {
+#ifdef HAVE_RTNL_LINK_BOND_GET_MODE
+  assert(link);
+
+  int rv;
+  std::deque<rtnl_addr *> addresses;
+  auto bond = nl->get_link_by_ifindex(rtnl_link_get_master(link));
+  nl->get_l3_addr(bond.get(), &addresses);
+
+  for (auto i : addresses) {
+    nl->add_l3_addr(i);
+  }
+
+#endif
+  return rv;
+}
+
 } // namespace basebox

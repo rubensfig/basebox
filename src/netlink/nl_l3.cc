@@ -258,11 +258,6 @@ int nl_l3::add_l3_addr(struct rtnl_addr *a) {
       bool tagged = !!rtnl_link_is_vlan(link);
 
       rv = vlan->add_vlan(_link.get(), vid, tagged, vrf_id);
-
-      auto addr = rtnl_link_get_addr(_link.get());
-      rofl::caddress_ll mac = libnl_lladdr_2_rofl(addr);
-
-      rv = add_l3_termination(mem, vid, mac, AF_INET);
     }
   }
 
@@ -289,6 +284,8 @@ int nl_l3::add_l3_addr_v6(struct rtnl_addr *a) {
   // link local addresses must redirect to controllers
   int port_id = nl->get_port_id(link);
   auto addr = rtnl_addr_get_local(a);
+  uint32_t vrf_id = 0; // real size is uint16
+
   if (is_ipv6_link_local_address(addr)) {
 
     rofl::caddress_in6 ipv6_dst = libnl_in6addr_2_rofl(addr, &rv);
@@ -353,6 +350,17 @@ int nl_l3::add_l3_addr_v6(struct rtnl_addr *a) {
     if (rv < 0) {
       LOG(ERROR) << __FUNCTION__ << ": failed to add vlan id " << vid
                  << " (tagged=" << tagged << " to link " << OBJ_CAST(link);
+    }
+  }
+
+  if (auto members = nl->get_bond_members_by_lag(link); !members.empty()) {
+    VLOG(1) << __FUNCTION__ << ": BOND configuring slaves";
+
+    for (auto mem : members) {
+      auto _link = nl->get_link_by_ifindex(nl->get_ifindex_by_port_id(mem));
+      bool tagged = !!rtnl_link_is_vlan(link);
+
+      rv = vlan->add_vlan(_link.get(), vid, tagged, vrf_id);
     }
   }
 
@@ -483,6 +491,24 @@ int nl_l3::del_l3_addr(struct rtnl_addr *a) {
   }
 
   return rv;
+}
+
+int nl_l3::get_l3_addr(struct rtnl_link *link,
+                       std::deque<rtnl_addr *> addresses) {
+  std::unique_ptr<rtnl_addr, decltype(&rtnl_addr_put)> filter(rtnl_addr_alloc(),
+                                                              rtnl_addr_put);
+
+  rtnl_addr_set_ifindex(filter.get(), rtnl_link_get_ifindex(link));
+  rtnl_addr_set_family(filter.get(), AF_UNSPEC);
+
+  nl_cache_foreach_filter(
+      nl->get_cache(cnetlink::NL_ADDR_CACHE), OBJ_CAST(filter.get()),
+      [](struct nl_object *o, void *arg) {
+        auto *addr = (std::deque<rtnl_addr *> *)arg;
+        addr->push_back(ADDR_CAST(o));
+      },
+      &addresses);
+  return 0;
 }
 
 int nl_l3::add_l3_neigh_egress(struct rtnl_neigh *n, uint32_t *l3_interface_id,
