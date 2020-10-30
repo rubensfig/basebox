@@ -147,8 +147,19 @@ void nl_bridge::add_interface(rtnl_link *link) {
   // configure bonds and physical ports (non members of bond)
   update_vlans(nullptr, link);
 
-  if (get_vlan_proto() == ETH_P_8021AD)
-    sw->set_egress_tpid(nl->get_port_id(link));
+  if (int portid = nl->get_port_id(link);
+      get_vlan_proto() == ETH_P_8021AD &&
+      nbi::get_port_type(portid) != nbi::port_type_lag) {
+    sw->set_egress_tpid(portid);
+
+    // Setting the egress TPID only works for physical ports on the ASIC
+  } else if (get_vlan_proto() == ETH_P_8021AD &&
+             nbi::get_port_type(portid) == nbi::port_type_lag) {
+
+    auto members = nl->get_bond_members_by_lag(link);
+    for (auto mem : members)
+      sw->set_egress_tpid(nl->get_port_id(mem));
+  }
 }
 
 void nl_bridge::update_interface(rtnl_link *old_link, rtnl_link *new_link) {
