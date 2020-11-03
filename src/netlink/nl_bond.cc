@@ -67,6 +67,23 @@ int nl_bond::update_lag(rtnl_link *old_link, rtnl_link *new_link) {
   uint8_t o_mode, n_mode;
   uint32_t lag_id = nl->get_port_id(new_link);
 
+  if (lag_id == 0) {
+    int master_id = rtnl_link_get_master(new_link);
+    auto master = nl->get_link(master_id, AF_UNSPEC);
+
+    if(master == nullptr) {
+      LOG(ERROR) << __FUNCTION__ << ": failed to get master "
+              << master;
+      return -EINVAL;
+    }
+
+    rv = add_lag(master);
+    if (rv < 0)
+      return rv;
+
+    lag_id = rv;
+  }
+
   rv = rtnl_link_bond_get_mode(old_link, &o_mode);
   if (rv < 0) {
     VLOG(1) << __FUNCTION__ << ": failed to get mode for "
@@ -220,6 +237,7 @@ int nl_bond::add_lag_member(rtnl_link *bond, rtnl_link *link) {
   }
 
   // XXX FIXME check for vlan interfaces
+  add_l3_address(bond);
 #endif
 
   return rv;
@@ -257,6 +275,8 @@ int nl_bond::remove_lag_member(rtnl_link *bond, rtnl_link *link) {
 
   rv = swi->lag_remove_member(it->second, port_id);
   lag_members.erase(lm_rv);
+
+  remove_l3_address(bond);
 #endif
 
   return rv;
@@ -295,6 +315,44 @@ int nl_bond::update_lag_member(rtnl_link *old_slave, rtnl_link *new_slave) {
                                   new_state == 0);
 #endif
   return 0;
+}
+
+int nl_bond::add_l3_address(rtnl_link *link) {
+  int rv = 0;
+#ifdef HAVE_RTNL_LINK_BOND_GET_MODE
+  assert(link);
+
+  std::deque<rtnl_addr *> addresses;
+  nl->get_l3_addr(link, &addresses);
+
+  for (auto i : addresses) {
+    rv = nl->add_l3_addr(i);
+    if (rv < 0)
+      LOG(ERROR) << __FUNCTION__ << ":failed to add l3 address to "
+                 << OBJ_CAST(link);
+  }
+
+#endif
+  return rv;
+}
+
+int nl_bond::remove_l3_address(rtnl_link *link) {
+  int rv = 0;
+#ifdef HAVE_RTNL_LINK_BOND_GET_MODE
+  assert(link);
+
+  std::deque<rtnl_addr *> addresses;
+  nl->get_l3_addr(link, &addresses);
+
+  for (auto i : addresses) {
+    rv = nl->del_l3_addr(i);
+    if (rv < 0)
+      LOG(ERROR) << __FUNCTION__ << ":failed to add l3 address to "
+                 << OBJ_CAST(link);
+  }
+
+#endif
+  return rv;
 }
 
 } // namespace basebox
