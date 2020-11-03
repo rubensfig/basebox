@@ -631,6 +631,11 @@ void nl_bridge::add_neigh_to_fdb(rtnl_neigh *neigh) {
   nl_addr *mac = rtnl_neigh_get_lladdr(neigh);
   int vlan = rtnl_neigh_get_vlan(neigh);
 
+  if (vlan < 0) {
+    LOG(ERROR) << __FUNCTION__ << ": invalid vlan in neigh " << OBJ_CAST(neigh);
+    return;
+  }
+
   bool permanent = true;
 
   // for sure this is master (sw bridged)
