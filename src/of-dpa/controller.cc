@@ -256,7 +256,7 @@ void controller::handle_error_message(rofl::crofdpt &dpt,
           << " pkt received: " << std::endl
           << msg;
 
-  LOG(WARNING) << __FUNCTION__ << ": not implemented";
+  LOG(WARNING) << __FUNCTION__ << msg;
 }
 
 void controller::handle_port_desc_stats_reply(
@@ -1314,12 +1314,15 @@ int controller::l3_unicast_route_add(const rofl::caddress_in4 &ipv4_dst,
   try {
     rofl::crofdpt &dpt = set_dpt(dptid, true);
 
+    VLOG(1) << " L3 IFACE ID 1 " << l3_interface_id;
     if (l3_interface_id) {
       if (is_ecmp)
         l3_interface_id = fm_driver.group_id_l3_ecmp(l3_interface_id);
-      else
+      else 
         l3_interface_id = fm_driver.group_id_l3_unicast(l3_interface_id);
     }
+    VLOG(1) << " L3 IFACE ID 2 " << std::hex << l3_interface_id;
+    VLOG(1) << " IPv4 DST " << ipv4_dst;
 
     dpt.send_flow_mod_message(rofl::cauxid(0),
                               fm_driver.enable_ipv4_unicast_lpm(

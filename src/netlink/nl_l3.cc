@@ -514,6 +514,7 @@ int nl_l3::add_l3_neigh_egress(struct rtnl_neigh *n, uint32_t *l3_interface_id,
   auto tagged = !!rtnl_link_is_vlan(link.get());
   auto s_mac = rtnl_link_get_addr(link.get());
 
+  VLOG(1) << " NEIGH " << OBJ_CAST(n);
   if (nl->is_bridge_interface(link.get())) {
     // Handle the Bridge SVI
     // the egress entries for the Bridge SVIs are the ports
@@ -523,8 +524,9 @@ int nl_l3::add_l3_neigh_egress(struct rtnl_neigh *n, uint32_t *l3_interface_id,
 
     auto fdb_neigh = nl->search_fdb(vid, lladdr);
     for (auto neigh : fdb_neigh) {
-      VLOG(2) << __FUNCTION__ << ": found iface=" << OBJ_CAST(neigh);
-      VLOG(2) << __FUNCTION__ << ": found link=" << OBJ_CAST(link.get());
+      VLOG(1) << " SETTIN FDB NEIGH";
+      VLOG(1) << __FUNCTION__ << ": found iface=" << OBJ_CAST(neigh);
+      VLOG(1) << __FUNCTION__ << ": found link=" << OBJ_CAST(link.get());
 
       auto neigh_ifindex = rtnl_neigh_get_ifindex(neigh);
       auto neigh_link = nl->get_link_by_ifindex(neigh_ifindex);
@@ -538,6 +540,7 @@ int nl_l3::add_l3_neigh_egress(struct rtnl_neigh *n, uint32_t *l3_interface_id,
       }
 
       rv = add_l3_egress(neigh_ifindex, vid, s_mac, d_mac, l3_interface_id);
+      VLOG(1) << " FDB NEIGH L3 ID " << *l3_interface_id;
 
       if (rv < 0) {
         LOG(ERROR) << __FUNCTION__
@@ -929,6 +932,11 @@ int nl_l3::add_l3_egress(int ifindex, const uint16_t vid,
       return rv;
     }
 
+    LOG(ERROR) << __FUNCTION__ << ": NEEDLE 1"
+      << " PORT ID " << port_id 
+      << " SRC MAC " << src_mac
+      << " DST MAC " << dst_mac;
+
     l3_interface_mapping.emplace(
         std::make_pair(l3_if_tuple, l3_interface(*l3_interface_id)));
   } else {
@@ -1307,6 +1315,8 @@ int nl_l3::get_l3_interface_id(rtnl_neigh *n, uint32_t *l3_interface_id,
                                uint32_t vid) {
   assert(l3_interface_id);
 
+  VLOG(1) << " NEIGH " << OBJ_CAST(n);
+
   struct nl_addr *d_mac = rtnl_neigh_get_lladdr(n);
   int ifindex = rtnl_neigh_get_ifindex(n);
   auto link = nl->get_link_by_ifindex(ifindex);
@@ -1324,9 +1334,16 @@ int nl_l3::get_l3_interface_id(rtnl_neigh *n, uint32_t *l3_interface_id,
 
   auto it = l3_interface_mapping.equal_range(needle);
 
-  if (it.first == l3_interface_mapping.end()) {
-    return -ENODATA;
-  }
+  LOG(ERROR) << __FUNCTION__ << ": not found l3 interface id 1";
+  VLOG(1) << " SIZE " << l3_interface_mapping.size();
+  LOG(ERROR) << __FUNCTION__ << ": NEEDLE "
+    << " PORT ID " << port_id 
+    << " SRC MAC " << src_mac
+    << " DST MAC " << dst_mac;
+
+  //if (it.first == l3_interface_mapping.end()) {
+    //return -ENODATA;
+  //}
 
   for (auto i = it.first; i != it.second; ++i) {
     if (i->first == needle) {
@@ -1335,6 +1352,7 @@ int nl_l3::get_l3_interface_id(rtnl_neigh *n, uint32_t *l3_interface_id,
     }
   }
 
+  LOG(ERROR) << __FUNCTION__ << ": not found l3 interface id 2";
   // not found either
   return -ENODATA;
 }
@@ -1556,6 +1574,7 @@ int nl_l3::add_l3_unicast_route(rtnl_route *r, bool update_route) {
       for (auto i : fdb_res) {
         auto vid = rtnl_neigh_get_vlan(i);
         get_l3_interface_id(i, &l3_interface_id, vid);
+        VLOG(1) << " FDB RES " << OBJ_CAST(i) << " L3 IFACE " << l3_interface_id;
       }
 
     } else {
@@ -1570,10 +1589,11 @@ int nl_l3::add_l3_unicast_route(rtnl_route *r, bool update_route) {
       }
     }
 
-    VLOG(2) << __FUNCTION__ << ": got l3_interface_id=" << l3_interface_id;
+    VLOG(1) << __FUNCTION__ << ": got l3_interface_id=" << l3_interface_id;
     l3_interfaces.emplace(l3_interface_id);
   }
 
+  VLOG(1) << " NNHS " << nnhs;
   switch (nnhs) {
   case 0:
     // Not yet determined next-hop, the rule must be installed to the switch
