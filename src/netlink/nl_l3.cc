@@ -1814,12 +1814,16 @@ void nl_l3::vrf_detach(rtnl_link *old_link, rtnl_link *new_link) {
 uint16_t nl_l3::get_vrf_table_id(rtnl_link *link) {
   int rv = 0;
 
-  auto lt = get_link_type(_l.get());
+  auto lt = get_link_type(link);
+  VLOG(1) << __FUNCTION__ << ": getting VRF id for lt=" << lt;
 
   switch (lt) {
   case LT_BRIDGE_SLAVE:
+    break;
   case LT_TUN:
+    break;
   case LT_BOND:
+    break;
   case LT_VLAN:
     auto vrf = nl->get_link_by_ifindex(rtnl_link_get_master(link));
     if (vrf.get() && !rtnl_link_is_vrf(link) && rtnl_link_is_vrf(vrf.get())) {
