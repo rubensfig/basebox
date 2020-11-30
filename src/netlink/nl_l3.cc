@@ -1815,7 +1815,7 @@ uint16_t nl_l3::get_vrf_table_id(rtnl_link *link) {
   int rv = 0;
 
   auto lt = get_link_type(link);
-  VLOG(1) << __FUNCTION__ << ": getting VRF id for lt=" << lt;
+  VLOG(1) << __FUNCTION__ << ": getting VRF id for lt=" << lt << " link=" << OBJ_CAST(link);
 
   auto vrf = nl->get_link_by_ifindex(rtnl_link_get_master(link));
 
@@ -1825,6 +1825,7 @@ uint16_t nl_l3::get_vrf_table_id(rtnl_link *link) {
   case LT_TUN:
     break;
   case LT_BOND:
+    LOG(ERROR) << __FUNCTION__ << ": port type unhandled";
     break;
   case LT_VLAN: {
     if (vrf.get() && !rtnl_link_is_vrf(link) && rtnl_link_is_vrf(vrf.get())) {
