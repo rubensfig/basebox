@@ -1759,20 +1759,24 @@ uint16_t nl_l3::get_vrf_table_id(rtnl_link *link) {
   auto lt = get_link_type(link);
   VLOG(1) << __FUNCTION__ << ": getting VRF id for lt=" << lt << " link=" << OBJ_CAST(link);
 
-  auto vrf = nl->get_link_by_ifindex(rtnl_link_get_master(link));
+  auto master = nl->get_link_by_ifindex(rtnl_link_get_master(link));
 
   switch (lt) {
-  case LT_TUN:
-    LOG(ERROR) << __FUNCTION__ << ": tun type ";
+  case LT_BOND_SLAVE:
+    LOG(ERROR) << __FUNCTION__ << ": bond_slave type ";
+
     return 0;
     break;
   case LT_BOND:
     LOG(ERROR) << __FUNCTION__ << ": bond type ";
+    {
+      auto 
+    }
     return 0;
     break;
   case LT_VRF_SLAVE: {
-    if (vrf.get() && !rtnl_link_is_vrf(link) && rtnl_link_is_vrf(vrf.get())) {
-      link = vrf.get();
+    if (master.get() && !rtnl_link_is_vrf(link) && rtnl_link_is_vrf(master.get())) {
+      link = master.get();
     } else {
       VLOG(2) << __FUNCTION__ << ": link=" << OBJ_CAST(link)
               << " is not a VRF interface ";
