@@ -6,6 +6,7 @@
 
 #include <glog/logging.h>
 #include <netlink/route/link.h>
+#include <netlink/route/neighbour.h>
 #include <netlink/route/link/vlan.h>
 
 #include "cnetlink.h"
@@ -168,6 +169,75 @@ uint16_t nl_vlan::get_vid(rtnl_link *link) {
   VLOG(2) << __FUNCTION__ << ": vid=" << vid << " interface=" << OBJ_CAST(link);
 
   return vid;
+}
+
+void nl_vlan::handle_vrf_attach(rtnl_link *old_link, rtnl_link *new_link) {
+  assert(old_link);
+  assert(new_link);
+
+  uint16_t vid = get_vid(old_link);
+
+  uint16_t vrf_id = nl->get_vrf_table_id(new_link);
+  // get bridge ports, and rewrite VLAN with the
+  // correct VRF
+  auto fdb_entries = nl->search_fdb(vid, nullptr);
+  for (auto entry : fdb_entries) {
+    auto link = nl->get_link_by_ifindex(rtnl_neigh_get_ifindex(entry));
+
+    remove_ingress_vlan(nl->get_port_id(link.get()), vid, true);
+
+    auto members = nl->get_bond_members_by_lag(link.get());
+    for (auto mem : members) {
+      remove_ingress_vlan(mem, vid, true);
+    }
+  }
+
+  for (auto entry : fdb_entries) {
+    auto link = nl->get_link_by_ifindex(rtnl_neigh_get_ifindex(entry));
+
+    add_vlan(link.get(), vid, true, vrf_id);
+
+    auto members = nl->get_bond_members_by_lag(link.get());
+    for (auto mem : members) {
+      auto _link = nl->get_link_by_ifindex(nl->get_ifindex_by_port_id(mem));
+      add_vlan(_link.get(), vid, true, vrf_id);
+    }
+  }
+}
+
+void nl_vlan::handle_vrf_detach(rtnl_link *old_link, rtnl_link *new_link) {
+  assert(old_link);
+  assert(new_link);
+
+  if (!nl->is_bridge_configured(old_link))
+    return;
+
+  uint16_t vid = get_vid(new_link);
+
+  uint16_t vrf_id = nl->get_vrf_table_id(old_link);
+  auto fdb_entries = nl->search_fdb(vid, nullptr);
+  for (auto entry : fdb_entries) {
+    auto link = nl->get_link_by_ifindex(rtnl_neigh_get_ifindex(entry));
+
+    remove_ingress_vlan(nl->get_port_id(link.get()), vid, true, vrf_id);
+
+    auto members = nl->get_bond_members_by_lag(link.get());
+    for (auto mem : members) {
+      remove_ingress_vlan(mem, vid, true, vrf_id);
+    }
+  }
+
+  for (auto entry : fdb_entries) {
+    auto link = nl->get_link_by_ifindex(rtnl_neigh_get_ifindex(entry));
+
+    add_vlan(link.get(), vid, true);
+
+    auto members = nl->get_bond_members_by_lag(link.get());
+    for (auto mem : members) {
+      auto _link = nl->get_link_by_ifindex(nl->get_ifindex_by_port_id(mem));
+      add_vlan(_link.get(), vid, true);
+    }
+  }
 }
 
 } // namespace basebox

@@ -29,6 +29,9 @@ public:
 
   uint16_t get_vid(rtnl_link *link);
 
+  void handle_vrf_attach(rtnl_link *old_link, rtnl_link *new_link);
+  void handle_vrf_detach(rtnl_link *old_link, rtnl_link *new_link);
+
   bool is_vid_valid(uint16_t vid) const {
     if (vid < vid_low || vid > vid_high)
       return false;

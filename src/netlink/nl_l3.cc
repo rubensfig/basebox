@@ -1743,72 +1743,14 @@ int nl_l3::del_l3_unicast_route(rtnl_route *r, bool keep_route) {
 // removing the existing entry, since OFDPA requires that the VLAN must be
 // configured with the same VRF
 void nl_l3::vrf_attach(rtnl_link *old_link, rtnl_link *new_link) {
-  assert(link);
-
-  uint16_t vid = vlan->get_vid(old_link);
-
-  uint16_t vrf_id = get_vrf_table_id(new_link);
-  // get bridge ports, and rewrite VLAN with the
-  // correct VRF
-  auto fdb_entries = nl->search_fdb(vid, nullptr);
-  for (auto entry : fdb_entries) {
-    auto link = nl->get_link_by_ifindex(rtnl_neigh_get_ifindex(entry));
-
-    vlan->remove_ingress_vlan(nl->get_port_id(link.get()), vid, true);
-
-    auto members = nl->get_bond_members_by_lag(link.get());
-    for (auto mem : members) {
-      vlan->remove_ingress_vlan(mem, vid, true);
-    }
-  }
-
-  for (auto entry : fdb_entries) {
-    auto link = nl->get_link_by_ifindex(rtnl_neigh_get_ifindex(entry));
-
-    vlan->add_vlan(link.get(), vid, true, vrf_id);
-
-    auto members = nl->get_bond_members_by_lag(link.get());
-    for (auto mem : members) {
-      auto _link = nl->get_link_by_ifindex(nl->get_ifindex_by_port_id(mem));
-      vlan->add_vlan(_link.get(), vid, true, vrf_id);
-    }
-  }
+  vlan->handle_vrf_attach(old_link, new_link);
 }
 
 // Modifying the previously existing entries on the VLAN table requires
 // removing the existing entry, since OFDPA requires that the VLAN must be
 // configured with the same VRF
 void nl_l3::vrf_detach(rtnl_link *old_link, rtnl_link *new_link) {
-  assert(link);
-  if (!nl->is_bridge_configured(old_link))
-    return;
-
-  uint16_t vid = vlan->get_vid(new_link);
-
-  uint16_t vrf_id = get_vrf_table_id(old_link);
-  auto fdb_entries = nl->search_fdb(vid, nullptr);
-  for (auto entry : fdb_entries) {
-    auto link = nl->get_link_by_ifindex(rtnl_neigh_get_ifindex(entry));
-
-    vlan->remove_ingress_vlan(nl->get_port_id(link.get()), vid, true, vrf_id);
-
-    auto members = nl->get_bond_members_by_lag(link.get());
-    for (auto mem : members) {
-      vlan->remove_ingress_vlan(mem, vid, true, vrf_id);
-    }
-  }
-
-  for (auto entry : fdb_entries) {
-    auto link = nl->get_link_by_ifindex(rtnl_neigh_get_ifindex(entry));
-
-    vlan->add_vlan(link.get(), vid, true);
-
-    auto members = nl->get_bond_members_by_lag(link.get());
-    for (auto mem : members) {
-      auto _link = nl->get_link_by_ifindex(nl->get_ifindex_by_port_id(mem));
-      vlan->add_vlan(_link.get(), vid, true);
-    }
-  }
+  vlan->handle_vrf_detach(old_link, new_link);
 }
 
 uint16_t nl_l3::get_vrf_table_id(rtnl_link *link) {
