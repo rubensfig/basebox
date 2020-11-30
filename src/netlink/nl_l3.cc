@@ -1814,13 +1814,23 @@ void nl_l3::vrf_detach(rtnl_link *old_link, rtnl_link *new_link) {
 uint16_t nl_l3::get_vrf_table_id(rtnl_link *link) {
   int rv = 0;
 
-  auto vrf = nl->get_link_by_ifindex(rtnl_link_get_master(link));
-  if (vrf.get() && !rtnl_link_is_vrf(link) && rtnl_link_is_vrf(vrf.get())) {
-    link = vrf.get();
-  } else {
-    VLOG(2) << __FUNCTION__ << ": link=" << OBJ_CAST(link)
-            << " is not a VRF interface ";
-    return 0;
+  auto lt = get_link_type(_l.get());
+
+  switch (lt) {
+  case LT_BRIDGE_SLAVE:
+  case LT_TUN:
+  case LT_BOND:
+  case LT_VLAN:
+    auto vrf = nl->get_link_by_ifindex(rtnl_link_get_master(link));
+    if (vrf.get() && !rtnl_link_is_vrf(link) && rtnl_link_is_vrf(vrf.get())) {
+      link = vrf.get();
+    } else {
+      VLOG(2) << __FUNCTION__ << ": link=" << OBJ_CAST(link)
+              << " is not a VRF interface ";
+      return 0;
+    }
+  default :
+    LOG(ERROR) << __FUNCTION__ << ": port type unhandled";
   }
 
   uint32_t vrf_id;

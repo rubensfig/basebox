@@ -63,6 +63,10 @@ public:
   int get_port_id(int ifindex) const;
   int get_ifindex_by_port_id(uint32_t port_id) const;
 
+  int get_vrf_table_id(rtnl_link *l) const {
+    return l3->get_vrf_table_id(l);
+  }
+
   nl_cache *get_cache(enum nl_cache_t id) { return caches[id]; }
 
   void resend_state() noexcept;
