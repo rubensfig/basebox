@@ -1833,6 +1833,7 @@ uint16_t nl_l3::get_vrf_table_id(rtnl_link *link) {
               << " is not a VRF interface ";
       return 0;
     }
+    break;
   default :
     LOG(ERROR) << __FUNCTION__ << ": port type unhandled";
   }

@@ -21,7 +21,7 @@ int nl_vlan::add_vlan(rtnl_link *link, uint16_t vid, bool tagged,
                       uint16_t vrf_id) {
   assert(swi);
 
-  vrf_id = nl->get_vrf_table_id(l);
+  vrf_id = nl->get_vrf_table_id(link);
 
   VLOG(2) << __FUNCTION__ << ": add vid=" << vid << " tagged=" << tagged
           << " vrf=" << vrf_id;
