@@ -1817,6 +1817,8 @@ uint16_t nl_l3::get_vrf_table_id(rtnl_link *link) {
   auto lt = get_link_type(link);
   VLOG(1) << __FUNCTION__ << ": getting VRF id for lt=" << lt;
 
+  auto vrf = nl->get_link_by_ifindex(rtnl_link_get_master(link));
+
   switch (lt) {
   case LT_BRIDGE_SLAVE:
     break;
@@ -1824,8 +1826,7 @@ uint16_t nl_l3::get_vrf_table_id(rtnl_link *link) {
     break;
   case LT_BOND:
     break;
-  case LT_VLAN:
-    auto vrf = nl->get_link_by_ifindex(rtnl_link_get_master(link));
+  case LT_VLAN: {
     if (vrf.get() && !rtnl_link_is_vrf(link) && rtnl_link_is_vrf(vrf.get())) {
       link = vrf.get();
     } else {
@@ -1833,7 +1834,7 @@ uint16_t nl_l3::get_vrf_table_id(rtnl_link *link) {
               << " is not a VRF interface ";
       return 0;
     }
-    break;
+    } break;
   default :
     LOG(ERROR) << __FUNCTION__ << ": port type unhandled";
   }
