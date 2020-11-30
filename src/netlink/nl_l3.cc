@@ -1820,14 +1820,12 @@ uint16_t nl_l3::get_vrf_table_id(rtnl_link *link) {
   auto vrf = nl->get_link_by_ifindex(rtnl_link_get_master(link));
 
   switch (lt) {
-  case LT_BRIDGE_SLAVE:
-    break;
   case LT_TUN:
     break;
   case LT_BOND:
     LOG(ERROR) << __FUNCTION__ << ": port type unhandled";
     break;
-  case LT_VLAN: {
+  case LT_VRF_SLAVE: {
     if (vrf.get() && !rtnl_link_is_vrf(link) && rtnl_link_is_vrf(vrf.get())) {
       link = vrf.get();
     } else {
