@@ -1769,9 +1769,6 @@ uint16_t nl_l3::get_vrf_table_id(rtnl_link *link) {
     break;
   case LT_BOND:
     LOG(ERROR) << __FUNCTION__ << ": bond type ";
-    {
-      auto 
-    }
     return 0;
     break;
   case LT_VRF_SLAVE: {
