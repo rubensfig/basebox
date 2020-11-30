@@ -413,6 +413,10 @@ int cnetlink::get_ifindex_by_port_id(uint32_t port_id) const {
     return tap_man->get_ifindex(port_id);
 }
 
+int cnetlink::get_vrf_table_id(rtnl_link *l) const {
+  return l3->get_vrf_table_id(l);
+}
+
 void cnetlink::handle_wakeup(rofl::cthread &thread) {
   bool do_wakeup = false;
 
