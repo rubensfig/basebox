@@ -171,10 +171,10 @@ uint16_t nl_vlan::get_vid(rtnl_link *link) {
   return vid;
 }
 
-uint16_t nl_vlan::get_vrf_id(uint16_t vid) {
+nl_vlan::get_vrf_id(uint16_t vid) -> uint16_t {
   auto it_range = vlan_vrf.find(vid);
   if (it_range == vlan_vrf.end()) {
-    LOG(ERROR) << __FUNCTION__ << ": could not retrieve neighbor";
+    LOG(ERROR) << __FUNCTION__ << ": did not find correct vrf id for vlan=" << vid;
     return -EINVAL;
   }
 
