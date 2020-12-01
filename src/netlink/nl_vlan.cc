@@ -174,7 +174,8 @@ uint16_t nl_vlan::get_vid(rtnl_link *link) {
 }
 
 uint16_t nl_vlan::get_vrf_id(uint16_t vid) {
-  VLOG(1) << __FUNCTION__ << 
+  VLOG(1) << __FUNCTION__ << " GET VRF ID " << vid;
+
   auto it_range = vlan_vrf.find(vid);
   if (it_range == vlan_vrf.end()) {
     LOG(ERROR) << __FUNCTION__ << ": did not find correct vrf id for vlan=" << vid;
