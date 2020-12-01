@@ -157,6 +157,7 @@ uint16_t nl_vlan::get_vid(rtnl_link *link) {
     break;
   case LT_VLAN:
   case LT_VRF_SLAVE:
+  case LT_BRIDGE_SLAVE:
     vid = rtnl_link_vlan_get_id(link);
     break;
   default:
