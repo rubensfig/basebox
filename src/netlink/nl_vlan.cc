@@ -174,10 +174,11 @@ uint16_t nl_vlan::get_vid(rtnl_link *link) {
 }
 
 uint16_t nl_vlan::get_vrf_id(uint16_t vid) {
+  VLOG(1) << __FUNCTION__ << 
   auto it_range = vlan_vrf.find(vid);
   if (it_range == vlan_vrf.end()) {
     LOG(ERROR) << __FUNCTION__ << ": did not find correct vrf id for vlan=" << vid;
-    return -EINVAL;
+    return 0;
   }
 
   return it_range->second;
@@ -190,9 +191,12 @@ void nl_vlan::handle_vrf_attach(rtnl_link *old_link, rtnl_link *new_link) {
   uint16_t vid = get_vid(old_link);
 
   auto vrf_id = get_vrf_id(vid);
-  if (vrf_id < 0) {
+  if (vrf_id == 0) {
     vrf_id = nl->get_vrf_table_id(new_link);
-    vlan_vrf.insert({vid, vrf_id});
+
+    if(vrf_id != 0) {
+      vlan_vrf.insert({vid, vrf_id});
+    }
   }
   VLOG(1) << __FUNCTION__ << ": attaching " << OBJ_CAST(new_link) << " vrf=" << vrf_id;
 
