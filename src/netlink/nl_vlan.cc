@@ -194,6 +194,7 @@ void nl_vlan::handle_vrf_attach(rtnl_link *old_link, rtnl_link *new_link) {
     vrf_id = nl->get_vrf_table_id(new_link);
     vlan_vrf.insert({vid, vrf_id});
   }
+  VLOG(1) << __FUNCTION__ << ": attaching " << OBJ_CAST(new_link) << " vrf=" << vrf_id;
 
   // get bridge ports, and rewrite VLAN with the
   // correct VRF
