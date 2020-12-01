@@ -22,7 +22,7 @@ int nl_vlan::add_vlan(rtnl_link *link, uint16_t vid, bool tagged,
                       uint16_t vrf_id) {
   assert(swi);
 
-  vrf_id = nl->get_vrf_table_id(link);
+  vrf_id = get_vrf_id(vid);
 
   VLOG(2) << __FUNCTION__ << ": add vid=" << vid << " tagged=" << tagged
           << " vrf=" << vrf_id;
@@ -171,13 +171,28 @@ uint16_t nl_vlan::get_vid(rtnl_link *link) {
   return vid;
 }
 
+uint16_t nl_vlan::get_vrf_id(uint16_t vid) {
+  auto it_range = vlan_vrf.equal_range(vid);
+  if (it_range == vlan_vrf.end()) {
+    LOG(ERROR) << __FUNCTION__ << ": could not retrieve neighbor";
+    return -EINVAL;
+  }
+
+  return it_range->second;
+}
+
 void nl_vlan::handle_vrf_attach(rtnl_link *old_link, rtnl_link *new_link) {
   assert(old_link);
   assert(new_link);
 
   uint16_t vid = get_vid(old_link);
 
-  uint16_t vrf_id = nl->get_vrf_table_id(new_link);
+  auto vrf_id = get_vrf_id(vid);
+  if (vrf_id < 0) {
+    vrf_id = nl->get_vrf_table_id(new_link);
+    vlan_vrf.insert({vid, vrf_id});
+  }
+
   // get bridge ports, and rewrite VLAN with the
   // correct VRF
   auto fdb_entries = nl->search_fdb(vid, nullptr);

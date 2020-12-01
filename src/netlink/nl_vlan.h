@@ -29,6 +29,7 @@ public:
 
   uint16_t get_vid(rtnl_link *link);
 
+  uint16_t get_vrf_id(uint16_t vid);
   void handle_vrf_attach(rtnl_link *old_link, rtnl_link *new_link);
   void handle_vrf_detach(rtnl_link *old_link, rtnl_link *new_link);
 
@@ -45,6 +46,8 @@ private:
 
   // ifindex - vlan - refcount
   std::map<std::pair<uint32_t, uint16_t>, uint32_t> port_vlan;
+  // vlan - vrf
+  std::map<uint16_t, uint16_t> vlan_vrf;
 
   switch_interface *swi;
   cnetlink *nl;
