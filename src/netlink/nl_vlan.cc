@@ -146,6 +146,7 @@ uint16_t nl_vlan::get_vid(rtnl_link *link) {
     return vid;
   }
 
+  VLOG(2) << __FUNCTION__ <<  " interface=" << OBJ_CAST(link);
   switch (lt) {
   case LT_BRIDGE:
     VLOG(2) << __FUNCTION__ << ": bridge default vid " << default_vid;
@@ -153,11 +154,11 @@ uint16_t nl_vlan::get_vid(rtnl_link *link) {
     break;
   case LT_TUN:
   case LT_BOND:
+  case LT_BRIDGE_SLAVE:
     vid = default_vid;
     break;
   case LT_VLAN:
   case LT_VRF_SLAVE:
-  case LT_BRIDGE_SLAVE:
     vid = rtnl_link_vlan_get_id(link);
     break;
   default:
