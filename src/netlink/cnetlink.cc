@@ -1036,7 +1036,7 @@ void cnetlink::link_updated(rtnl_link *old_link, rtnl_link *new_link) noexcept {
               << rtnl_link_get_name(new_link) << " to vrf "
               << OBJ_CAST(
                      get_link_by_ifindex(rtnl_link_get_master(new_link)).get());
-    l3->vrf_attach(old_link, new_link);
+    vlan->handle_vrf_attach(old_link, new_link);
     break;
   case LT_VRF_SLAVE:
     if (lt_new != LT_VLAN) {
