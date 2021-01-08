@@ -44,6 +44,8 @@ public:
 
   virtual ~nl_bridge();
 
+  int set_pvlan_stp(struct rtnl_bridge_vlan *bvlan_info);
+
   void set_bridge_interface(rtnl_link *);
   bool is_bridge_interface(rtnl_link *);
 
@@ -92,6 +94,33 @@ private:
                            const uint16_t vid, const uint32_t tunnel_id,
                            const std::deque<rtnl_link *> &bridge_ports,
                            bool add);
+
+  int stp_state_to_string(int state) {
+    std::string ret;
+    switch (state) {
+    case BR_STATE_FORWARDING:
+      ret = "forward";
+      break;
+    case BR_STATE_BLOCKING:
+      ret = "block";
+      break;
+    case BR_STATE_DISABLED:
+      ret = "disable";
+      break;
+    case BR_STATE_LISTENING:
+      ret = "listen";
+      break;
+    case BR_STATE_LEARNING:
+      ret = "learn";
+      break;
+    default:
+      VLOG(1) << __FUNCTION__ << ": stp state change not supported";
+      return -EINVAL;
+    }
+
+    return ret;
+  }
+
   rtnl_link *bridge;
   switch_interface *sw;
   std::shared_ptr<tap_manager> tap_man;

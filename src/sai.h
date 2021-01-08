@@ -223,8 +223,6 @@ public:
   /* @} */
 
   /* @ STP  { */
-#if 0
-  // TODO Unimplemented
   // This set of functions is currently defined in our datamodel
   // but no implementation. It is intented that these functions
   // provide the Per VLAN STP functions
@@ -232,12 +230,8 @@ public:
   // other Spanning Tree Groups/Instances
   // the stg_vlan_add and stg_vlan_remove function implements adding/removing
   // VLANS from a certain STG 
-  virtual int ofdpa_stg_create() noexcept = 0;
-  virtual int ofdpa_stg_destroy() noexcept = 0;
-
-  virtual int ofdpa_stg_vlan_add() noexcept = 0;
-  virtual int ofdpa_stg_vlan_remove() noexcept = 0;
-#endif
+  virtual int ofdpa_stg_create(uint16_t vlan_id) noexcept = 0;
+  virtual int ofdpa_stg_destroy(uint16_t vlan_id) noexcept = 0;
 
   virtual int ofdpa_stg_state_port_set(uint32_t port_id,
                                        std::string state) noexcept = 0;

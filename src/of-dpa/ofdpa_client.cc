@@ -301,7 +301,7 @@ ofdpa::OfdpaStatus::OfdpaStatusCode
 ofdpa_client::ofdpaStgStatePortSet(uint32_t port_id, std::string state) {
   ::OfdpaStatus response;
   ::ClientContext context;
-  ::openconfig_spanning_tree::Stp_Rstp_Interface_State request;
+  ::StpInterfaceState request;
 
   context.set_wait_for_ready(true);
 
@@ -411,6 +411,37 @@ ofdpa_client::ofdpaTrunkPortPSCSet(uint32_t lag_id, uint8_t mode) {
   if (not rv.ok()) {
     return ofdpa::OfdpaStatus::OFDPA_E_RPC;
   }
+
+  return response.status();
+}
+
+ofdpa::OfdpaStatus::OfdpaStatusCode ofdpa_client::ofdpaStgVlanAdd(uint16_t vlan_id) {
+  ::OfdpaStatus response;
+  ::ClientContext context;
+  ::VlanId request;
+
+  context.set_wait_for_ready(true);
+  request.set_vlan_id(vlan_id);
+
+  ::Status rv = stub_->ofdpaStgCreate(&context, request, &response);
+  if (not rv.ok()) {
+    return ofdpa::OfdpaStatus::OFDPA_E_RPC;
+  }
+
+  rv = stub_->ofdpaStgVlanAdd(&context, request, &response);
+  if (not rv.ok()) {
+    return ofdpa::OfdpaStatus::OFDPA_E_RPC;
+  }
+
+  return response.status();
+}
+
+ofdpa::OfdpaStatus::OfdpaStatusCode ofdpa_client::ofdpaStgVlanRemove(uint16_t vlan_id) {
+  ::OfdpaStatus response;
+  ::ClientContext context;
+
+  context.set_wait_for_ready(true);
+
   return response.status();
 }
 

@@ -21,6 +21,7 @@ struct rtnl_mdb;
 #define ROUTE_CAST(obj) reinterpret_cast<struct rtnl_route *>(obj)
 #define ADDR_CAST(obj) reinterpret_cast<struct rtnl_addr *>(obj)
 #define MDB_CAST(obj) reinterpret_cast<struct rtnl_mdb *>(obj)
+#define BRIDGE_VLAN_CAST(obj) reinterpret_cast<struct rtnl_bridge_vlan *>(obj)
 
 namespace basebox {
 

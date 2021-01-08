@@ -11,6 +11,7 @@
 #include <glog/logging.h>
 #include <linux/if_bridge.h>
 #include <netlink/route/link.h>
+#include <netlink/route/bridge_vlan.h>
 #ifdef HAVE_NETLINK_ROUTE_MDB_H
 #include <netlink/route/mdb.h>
 #endif
@@ -217,27 +218,7 @@ void nl_bridge::update_interface(rtnl_link *old_link, rtnl_link *new_link) {
     LOG(INFO) << __FUNCTION__ << "STP state changed, old=" << old_state
               << " new=" << new_state;
 
-    switch (new_state) {
-    case BR_STATE_FORWARDING:
-      state = "forward";
-      break;
-    case BR_STATE_BLOCKING:
-      state = "block";
-      break;
-    case BR_STATE_DISABLED:
-      state = "disable";
-      break;
-    case BR_STATE_LISTENING:
-      state = "listen";
-      break;
-    case BR_STATE_LEARNING:
-      state = "learn";
-      break;
-    default:
-      VLOG(1) << __FUNCTION__ << ": stp state change not supported";
-      return;
-    }
-
+    state = stp_state_to_string(new_state);
     auto port_id = nl->get_port_id(new_link);
     if (nbi::get_port_type(port_id) == nbi::port_type_lag) {
       auto members = nl->get_bond_members_by_lag(new_link);
@@ -1065,6 +1046,26 @@ int nl_bridge::mdb_entry_remove(rtnl_mdb *mdb_entry) {
 #endif
 
   return rv;
+}
+
+//struct rtnl_bridge_vlan {
+//	NLHDR_COMMON
+//	uint32_t ifindex;
+//	uint8_t family;
+//
+//	uint16_t vlan_id;
+//	uint16_t flags;
+//	uint16_t range;
+//	uint8_t state;
+int nl_bridge::set_pvlan_stp(struct rtnl_bridge_vlan *bvlan_info) {
+	int err = 0;
+	uint32_t ifindex = bvlan_info->ifindex;
+	uint16_t vlan_id = bvlan_info->vlan_id;
+	std::string state = stp_state_to_string(bvlan_info->state);
+ 
+	sw->ofdpa_stg_create(vlan_id);
+	sw->ofdpa_stg_state_port_set();
+	return err;
 }
 
 } /* namespace basebox */
