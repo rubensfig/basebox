@@ -7,9 +7,9 @@
 #include <map>
 #include <utility>
 #include <linux/if_packet.h>
+#include <linux/if_bridge.h>
 
 #include <glog/logging.h>
-#include <linux/if_bridge.h>
 #include <netlink/route/link.h>
 #include <netlink/route/bridge_vlan.h>
 #ifdef HAVE_NETLINK_ROUTE_MDB_H
@@ -1059,13 +1059,38 @@ int nl_bridge::mdb_entry_remove(rtnl_mdb *mdb_entry) {
 //	uint8_t state;
 int nl_bridge::set_pvlan_stp(struct rtnl_bridge_vlan *bvlan_info) {
 	int err = 0;
-	uint32_t ifindex = bvlan_info->ifindex;
-	uint16_t vlan_id = bvlan_info->vlan_id;
-	std::string state = stp_state_to_string(bvlan_info->state);
+	uint32_t ifindex = rtnl_bridge_vlan_get_ifindex(bvlan_info);
+	uint16_t vlan_id = rtnl_bridge_vlan_get_vlan_id(bvlan_info);
+	std::string state = stp_state_to_string(rtnl_bridge_vlan_get_state(bvlan_info));
  
 	sw->ofdpa_stg_create(vlan_id);
-	sw->ofdpa_stg_state_port_set();
+	sw->ofdpa_stg_state_port_set(vlan_id, state);
 	return err;
+}
+
+std::string nl_bridge::stp_state_to_string(uint8_t state) {
+	std::string ret;
+	switch (state) {
+	case BR_STATE_FORWARDING:
+		ret = "forward";
+		break;
+	case BR_STATE_BLOCKING:
+		ret = "block";
+		break;
+	case BR_STATE_DISABLED:
+		ret = "disable";
+		break;
+	case BR_STATE_LISTENING:
+		ret = "listen";
+		break;
+	case BR_STATE_LEARNING:
+		ret = "learn";
+		break;
+	default:
+		ret = "";
+	}
+
+    	return ret;
 }
 
 } /* namespace basebox */

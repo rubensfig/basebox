@@ -10,6 +10,7 @@
 extern "C" {
 struct nl_addr;
 struct rtnl_addr;
+struct rtnl_bridge_vlan;
 struct rtnl_link;
 struct rtnl_neigh;
 struct rtnl_route;

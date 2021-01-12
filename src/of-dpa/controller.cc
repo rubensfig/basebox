@@ -2153,7 +2153,7 @@ int controller::tunnel_port_tenant_remove(uint32_t lport_id,
 int controller::ofdpa_stg_create(uint16_t vlan_id) noexcept {
 	int rv;
 
-	rv = ofdpa->ofdpaStgStatePortSet(port_id, state);
+	rv = ofdpa->ofdpaStgVlanAdd(vlan_id);
 	if (rv < 0) {
 	LOG(ERROR) << __FUNCTION__ << ": failed to set the STP state";
 	}

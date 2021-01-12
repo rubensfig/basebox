@@ -16,7 +16,7 @@
 #include "netlink-utils.h"
 
 extern "C" {
-struct rtnl_link_bridge_vlan;
+struct rtnl_bridge_vlan;
 struct rtnl_link;
 struct rtnl_neigh;
 struct rtnl_mdb;
@@ -88,38 +88,13 @@ public:
                           const uint32_t tunnel_id, bool add);
 
 private:
+  std::string stp_state_to_string(uint8_t state);
   void update_vlans(rtnl_link *, rtnl_link *);
 
   void update_access_ports(rtnl_link *vxlan_link, rtnl_link *br_link,
                            const uint16_t vid, const uint32_t tunnel_id,
                            const std::deque<rtnl_link *> &bridge_ports,
                            bool add);
-
-  int stp_state_to_string(int state) {
-    std::string ret;
-    switch (state) {
-    case BR_STATE_FORWARDING:
-      ret = "forward";
-      break;
-    case BR_STATE_BLOCKING:
-      ret = "block";
-      break;
-    case BR_STATE_DISABLED:
-      ret = "disable";
-      break;
-    case BR_STATE_LISTENING:
-      ret = "listen";
-      break;
-    case BR_STATE_LEARNING:
-      ret = "learn";
-      break;
-    default:
-      VLOG(1) << __FUNCTION__ << ": stp state change not supported";
-      return -EINVAL;
-    }
-
-    return ret;
-  }
 
   rtnl_link *bridge;
   switch_interface *sw;
