@@ -1062,7 +1062,7 @@ int nl_bridge::set_pvlan_stp(struct rtnl_bridge_vlan *bvlan_info) {
 	uint32_t ifindex = rtnl_bridge_vlan_get_ifindex(bvlan_info);
 	uint16_t vlan_id = rtnl_bridge_vlan_get_vlan_id(bvlan_info);
 	std::string state = stp_state_to_string(rtnl_bridge_vlan_get_state(bvlan_info));
- 
+
 	sw->ofdpa_stg_create(vlan_id);
 	sw->ofdpa_stg_state_port_set(vlan_id, state);
 
