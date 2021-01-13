@@ -1450,11 +1450,11 @@ void cnetlink::route_mdb_apply(const nl_obj &obj) {
 void cnetlink::route_bridge_vlan_apply(const nl_obj &obj) {
   assert(obj.get_new_obj());
   switch (obj.get_msg_type()) {
-  case NL_ACT_NEW:
+  case RTM_NEWVLAN:
 	if (bridge)
 		bridge->set_pvlan_stp(BRIDGE_VLAN_CAST(obj.get_new_obj()));
 	break;
-  case NL_ACT_DEL:
+  case RTM_DELVLAN:
 	if (bridge)
 	        bridge->set_pvlan_stp(BRIDGE_VLAN_CAST(obj.get_new_obj()));
 	break;
