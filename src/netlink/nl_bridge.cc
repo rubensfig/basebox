@@ -1065,6 +1065,8 @@ int nl_bridge::set_pvlan_stp(struct rtnl_bridge_vlan *bvlan_info) {
  
 	sw->ofdpa_stg_create(vlan_id);
 	sw->ofdpa_stg_state_port_set(vlan_id, state);
+
+	LOG(INFO) << __FUNCTION__ << ": set state=" << state << " ifindex =" << ifindex;
 	return err;
 }
 
