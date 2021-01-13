@@ -550,6 +550,7 @@ void cnetlink::handle_wakeup(rofl::cthread &thread) {
 #endif
     case RTM_NEWVLAN:
     case RTM_DELVLAN:
+      LOG(INFO) << "RECEIVED MESSAGE";
       route_bridge_vlan_apply(obj);
       break;
     default:
