@@ -234,7 +234,7 @@ public:
   virtual int ofdpa_stg_destroy(uint16_t vlan_id) noexcept = 0;
 
   virtual int ofdpa_stg_state_port_set(uint32_t port_id,
-                                       std::string state) noexcept = 0;
+                                       std::string state, uint32_t  *vlan_bitmap=nullptr) noexcept = 0;
   /* @} */
 };
 

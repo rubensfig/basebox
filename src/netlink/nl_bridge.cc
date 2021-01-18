@@ -215,18 +215,27 @@ void nl_bridge::update_interface(rtnl_link *old_link, rtnl_link *new_link) {
   std::string state;
 
   if (old_state != new_state) {
-    LOG(INFO) << __FUNCTION__ << "STP state changed, old=" << old_state
+    LOG(INFO) << __FUNCTION__ << " STP state changed, old=" << old_state
               << " new=" << new_state;
+
+    rtnl_link_bridge_vlan *old_br_vlan, *new_br_vlan;
+    new_br_vlan = rtnl_link_bridge_get_port_vlan(new_link);
+    old_br_vlan = rtnl_link_bridge_get_port_vlan(old_link);
+
+    if (!br_vlan_equal(old_br_vlan, new_br_vlan)) {
+	    VLOG(1) << __FUNCTION__ << ": vlans should be the same"; 
+	    return;
+    }
 
     state = stp_state_to_string(new_state);
     auto port_id = nl->get_port_id(new_link);
     if (nbi::get_port_type(port_id) == nbi::port_type_lag) {
       auto members = nl->get_bond_members_by_lag(new_link);
       for (auto mem : members) {
-        sw->ofdpa_stg_state_port_set(mem, state);
+        sw->ofdpa_stg_state_port_set(mem, state, new_br_vlan->vlan_bitmap);
       }
     } else {
-      sw->ofdpa_stg_state_port_set(port_id, state);
+      sw->ofdpa_stg_state_port_set(port_id, state, new_br_vlan->vlan_bitmap);
     }
 
     return;
@@ -1059,14 +1068,12 @@ int nl_bridge::mdb_entry_remove(rtnl_mdb *mdb_entry) {
 //	uint8_t state;
 int nl_bridge::set_pvlan_stp(struct rtnl_bridge_vlan *bvlan_info) {
 	int err = 0;
-	uint32_t ifindex = rtnl_bridge_vlan_get_ifindex(bvlan_info);
 	uint16_t vlan_id = rtnl_bridge_vlan_get_vlan_id(bvlan_info);
 	std::string state = stp_state_to_string(rtnl_bridge_vlan_get_state(bvlan_info));
 
 	sw->ofdpa_stg_create(vlan_id);
-	sw->ofdpa_stg_state_port_set(vlan_id, state);
 
-	LOG(INFO) << __FUNCTION__ << ": set state=" << state << " ifindex =" << ifindex;
+	LOG(INFO) << __FUNCTION__ << ": set state=" << state << " VLAN =" << vlan_id;
 	return err;
 }
 

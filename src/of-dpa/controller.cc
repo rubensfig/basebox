@@ -2153,12 +2153,32 @@ int controller::tunnel_port_tenant_remove(uint32_t lport_id,
 int controller::ofdpa_stg_create(uint16_t vlan_id) noexcept {
 	int rv;
 
-	rv = ofdpa->ofdpaStgVlanAdd(vlan_id);
+	rv = ofdpa->ofdpaStgCreate(current_stg++);
 	if (rv < 0) {
-	LOG(ERROR) << __FUNCTION__ << ": failed to set the STP state";
+		LOG(ERROR) << __FUNCTION__ << ": failed to create the STP group";
+		return -EINVAL;
+	}
+	
+	rv = ofdpa->ofdpaStgVlanAdd(vlan_id, current_stg);
+	if (rv < 0) {
+		LOG(ERROR) << __FUNCTION__ << ": failed to add VLAN=" << vlan_id << "to the STP group=" << current_stg;
+	}
+	
+	vlan_to_stg.emplace(std::make_pair(vlan_id, current_stg));
+	return rv;
+}
+
+int controller::lookup_stpid(uint32_t *vlan_id) noexcept {
+	int vid = 0, stg_id = 0;
+	for (auto it: vlan_to_stg) {
+		vid = it.first;
+		if (!(vlan_id[vid / 32] & (((uint32_t)1) << (vid % 32)))) {
+			stg_id = it.second;		
+			break;
+		}
 	}
 
-	return rv;
+	return stg_id;
 }
 
 int controller::ofdpa_stg_destroy(uint16_t vlan_id) noexcept {
@@ -2166,10 +2186,11 @@ int controller::ofdpa_stg_destroy(uint16_t vlan_id) noexcept {
 }
 
 int controller::ofdpa_stg_state_port_set(uint32_t port_id,
-                                         std::string state) noexcept {
+                                         std::string state, uint32_t *vlan_bitmap) noexcept {
   int rv;
+  int stg_id = lookup_stpid(vlan_bitmap);
 
-  rv = ofdpa->ofdpaStgStatePortSet(port_id, state);
+  rv = ofdpa->ofdpaStgStatePortSet(port_id, state, stg_id);
   if (rv < 0) {
     LOG(ERROR) << __FUNCTION__ << ": failed to set the STP state";
   }

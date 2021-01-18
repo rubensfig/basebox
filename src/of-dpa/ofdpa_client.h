@@ -54,11 +54,14 @@ public:
   ofdpa::OfdpaStatus::OfdpaStatusCode
   ofdpaTunnelPortTenantDelete(uint32_t port_id, uint32_t tunnel_id);
 
-  ofdpa::OfdpaStatus::OfdpaStatusCode ofdpaStgVlanAdd(uint16_t vlan_id);
-  ofdpa::OfdpaStatus::OfdpaStatusCode ofdpaStgVlanRemove(uint16_t vlan_id);
+  ofdpa::OfdpaStatus::OfdpaStatusCode ofdpaStgCreate(uint16_t stg_id);
+  ofdpa::OfdpaStatus::OfdpaStatusCode ofdpaStgDestroy(uint16_t stg_id);
+
+  ofdpa::OfdpaStatus::OfdpaStatusCode ofdpaStgVlanAdd(uint16_t vlanid, uint32_t stgid);
+  ofdpa::OfdpaStatus::OfdpaStatusCode ofdpaStgVlanRemove(uint16_t vlan_id, uint32_t stg_id);
 
   ofdpa::OfdpaStatus::OfdpaStatusCode ofdpaStgStatePortSet(uint32_t port_id,
-                                                           std::string state);
+                                                           std::string state, uint32_t stg_id=0);
 
   ofdpa::OfdpaStatus::OfdpaStatusCode
   OfdpaTrunkCreate(uint32_t lag_id, std::string name, uint8_t mode);

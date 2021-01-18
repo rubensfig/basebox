@@ -1451,7 +1451,6 @@ void cnetlink::route_mdb_apply(const nl_obj &obj) {
 void cnetlink::route_bridge_vlan_apply(const nl_obj &obj) {
   assert(obj.get_new_obj());
 
-  LOG(WARNING) << __FUNCTION__ << "ENTERED";
   switch (obj.get_msg_type()) {
   case RTM_NEWVLAN:
 	if (bridge)

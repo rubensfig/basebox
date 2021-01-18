@@ -67,6 +67,7 @@ public:
   }
 
   ~controller() override {}
+  int lookup_stpid(uint32_t *vlan_id) noexcept;
 
 protected:
   void handle_conn_established(rofl::crofdpt &dpt,
@@ -309,7 +310,7 @@ public:
   int ofdpa_stg_destroy(uint16_t vlan_id) noexcept override;
 
   int ofdpa_stg_state_port_set(uint32_t port_id,
-                               std::string state) noexcept override;
+                               std::string state, uint32_t *vlan_bitmap=nullptr) noexcept override;
 
   /* print this */
   friend std::ostream &operator<<(std::ostream &os, const controller &box) {
@@ -328,6 +329,8 @@ private:
   std::map<uint16_t, std::set<uint32_t>> l2_domain;
   std::map<uint16_t, std::set<uint32_t>> lag;
   std::map<uint16_t, std::set<uint32_t>> tunnel_dlf_flood;
+  std::map<uint16_t, uint32_t> vlan_to_stg;
+  uint32_t current_stg = 2;
 
   struct multicast_entry {
     // mmac, vlan
