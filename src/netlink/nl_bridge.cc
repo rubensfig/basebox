@@ -1070,9 +1070,12 @@ int nl_bridge::mdb_entry_remove(rtnl_mdb *mdb_entry) {
 int nl_bridge::set_pvlan_stp(struct rtnl_bridge_vlan *bvlan_info) {
   int err = 0;
   uint32_t ifindex = rtnl_bridge_vlan_get_ifindex(bvlan_info);
-  uint16_t vlan_id = rtnl_bridge_vlan_get_vlan_id(bvlan_info);
-  std::string state =
-      stp_state_to_string(rtnl_bridge_vlan_get_state(bvlan_info));
+  struct rtnl_bvlan_entry *entry = rtnl_bridge_vlan_get_entry_head(bvlan_info);
+
+  uint16_t vlan_id = rtnl_bridge_vlan_entry_get_vlan_id(entry);
+
+  std::string stp_state =
+      stp_state_to_string(rtnl_bridge_vlan_entry_get_state(entry));
 
   if (is_bridge_interface(ifindex))
     return err;
@@ -1081,11 +1084,11 @@ int nl_bridge::set_pvlan_stp(struct rtnl_bridge_vlan *bvlan_info) {
   if (err < 0)
     return err;
 
-  err = sw->ofdpa_stg_state_port_set(nl->get_port_id(ifindex), vlan_id, state);
+  err = sw->ofdpa_stg_state_port_set(nl->get_port_id(ifindex), vlan_id, stp_state);
   if (err < 0)
     return err;
 
-  LOG(INFO) << __FUNCTION__ << ": set state=" << state << " VLAN =" << vlan_id;
+  LOG(INFO) << __FUNCTION__ << ": set state=" << stp_state << " VLAN =" << vlan_id;
   return err;
 }
 

@@ -2162,7 +2162,7 @@ int controller::ofdpa_stg_create(uint16_t vlan_id) noexcept {
   rv = ofdpa->ofdpaStgVlanAdd(vlan_id, current_stg);
   if (rv < 0) {
     LOG(ERROR) << __FUNCTION__ << ": failed to add VLAN=" << vlan_id
-               << "to the STP group=" << current_stg;
+               << " to the STP group=" << current_stg;
   }
 
   vlan_to_stg.emplace(std::make_pair(vlan_id, current_stg));
