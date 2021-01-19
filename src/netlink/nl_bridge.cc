@@ -1072,8 +1072,6 @@ int nl_bridge::set_pvlan_stp(struct rtnl_bridge_vlan *bvlan_info) {
     return err;
   }
 
-  LOG(INFO) << "IFINDEX " << ifindex << " VLAN " << vlan_id;
-
   if (is_bridge_interface(ifindex))
     return err;
 

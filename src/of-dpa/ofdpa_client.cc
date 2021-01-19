@@ -306,7 +306,7 @@ ofdpa_client::ofdpaStgStatePortSet(uint32_t port_id, std::string state,
 
   context.set_wait_for_ready(true);
 
-  request.set_name(std::to_string(port_id));
+  request.set_port_num(std::to_string(port_id));
   request.set_port_state(state);
   request.mutable_stg_id()->set_id(stg_id);
 
@@ -326,7 +326,7 @@ ofdpa_client::ofdpaGlobalStpStatePortSet(uint32_t port_id, std::string state) {
 
   context.set_wait_for_ready(true);
 
-  request.set_name(std::to_string(port_id));
+  request.set_port_num(std::to_string(port_id));
   request.set_port_state(state);
 
   ::Status rv = stub_->ofdpaGlobalStpStatePortSet(&context, request, &response);
