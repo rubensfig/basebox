@@ -71,22 +71,14 @@ void nl_bridge::set_bridge_interface(rtnl_link *bridge) {
 bool nl_bridge::is_bridge_interface(int ifindex) {
   assert(bridge);
 
-  if (ifindex != rtnl_link_get_ifindex(bridge))
-    return false;
-
-  return true;
+  return (ifindex == rtnl_link_get_ifindex(bridge)) ? true : false;
 }
 
 bool nl_bridge::is_bridge_interface(rtnl_link *link) {
   assert(bridge);
   assert(link);
 
-  if (rtnl_link_get_ifindex(link) != rtnl_link_get_ifindex(bridge))
-    return false;
-
-  // TODO compare more?
-
-  return true;
+  return is_bridge_interface(rtnl_link_get_ifindex(link));
 }
 
 // Read sysfs to obtain the value for the VLAN protocol on the switch.
