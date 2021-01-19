@@ -1071,11 +1071,14 @@ int nl_bridge::set_pvlan_stp(struct rtnl_bridge_vlan *bvlan_info) {
   int err = 0;
   uint32_t ifindex = rtnl_bridge_vlan_get_ifindex(bvlan_info);
   struct rtnl_bvlan_entry *entry = rtnl_bridge_vlan_get_entry_head(bvlan_info);
-
   uint16_t vlan_id = rtnl_bridge_vlan_entry_get_vlan_id(entry);
-
   std::string stp_state =
       stp_state_to_string(rtnl_bridge_vlan_entry_get_state(entry));
+
+  if (vlan_id == 1) {
+    VLOG(1) << __FUNCTION__ << ": skipping setting VLAN=1 state";
+    return err;
+  }
 
   if (is_bridge_interface(ifindex))
     return err;

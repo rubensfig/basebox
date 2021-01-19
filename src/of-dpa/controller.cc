@@ -2150,25 +2150,6 @@ int controller::tunnel_port_tenant_remove(uint32_t lport_id,
   return rv;
 }
 
-int controller::ofdpa_stg_create(uint16_t vlan_id) noexcept {
-  int rv;
-
-  rv = ofdpa->ofdpaStgCreate(current_stg++);
-  if (rv < 0) {
-    LOG(ERROR) << __FUNCTION__ << ": failed to create the STP group";
-    return -EINVAL;
-  }
-
-  rv = ofdpa->ofdpaStgVlanAdd(vlan_id, current_stg);
-  if (rv < 0) {
-    LOG(ERROR) << __FUNCTION__ << ": failed to add VLAN=" << vlan_id
-               << " to the STP group=" << current_stg;
-  }
-
-  vlan_to_stg.emplace(std::make_pair(vlan_id, current_stg));
-  return rv;
-}
-
 int controller::lookup_stpid(uint32_t vlan_id) noexcept {
   int vid = 0, stg_id = 0;
   auto it = vlan_to_stg.find(vlan_id);
@@ -2188,6 +2169,30 @@ int controller::ofdpa_stg_state_port_set(uint32_t port_id, uint16_t vlan_id,
     LOG(ERROR) << __FUNCTION__ << ": failed to set the STP state";
   }
 
+  return rv;
+}
+
+int controller::ofdpa_stg_create(uint16_t vlan_id) noexcept {
+  int rv;
+  int stg_id = lookup_stpid(vlan_id);
+
+  if (stg_id != 0)
+    return stg_id;
+
+  rv = ofdpa->ofdpaStgCreate(current_stg++);
+  if (rv < 0) {
+    LOG(ERROR) << __FUNCTION__ << ": failed to create the STP group";
+    return rv;
+  }
+
+  rv = ofdpa->ofdpaStgVlanAdd(vlan_id, current_stg);
+  if (rv < 0) {
+    LOG(ERROR) << __FUNCTION__ << ": failed to add VLAN=" << vlan_id
+               << " to the STP group=" << current_stg;
+    return rv;
+  }
+
+  vlan_to_stg.emplace(std::make_pair(vlan_id, current_stg));
   return rv;
 }
 
