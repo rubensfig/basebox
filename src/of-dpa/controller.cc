@@ -2168,27 +2168,21 @@ int controller::ofdpa_stg_create(uint16_t vlan_id) noexcept {
 	return rv;
 }
 
-int controller::lookup_stpid(uint32_t *vlan_id) noexcept {
+int controller::lookup_stpid(uint32_t vlan_id) noexcept {
 	int vid = 0, stg_id = 0;
-	for (auto it: vlan_to_stg) {
-		vid = it.first;
-		if (!(vlan_id[vid / 32] & (((uint32_t)1) << (vid % 32)))) {
-			stg_id = it.second;		
-			break;
-		}
-	}
+  auto it = vlan_to_stg.find(vlan_id);
 
-	return stg_id;
+	return (it == vlan_to_stg.end()) ? 0 : it->second;
 }
 
 int controller::ofdpa_stg_destroy(uint16_t vlan_id) noexcept {
        	return 0; 
 }
 
-int controller::ofdpa_stg_state_port_set(uint32_t port_id,
-                                         std::string state, uint32_t *vlan_bitmap) noexcept {
+int controller::ofdpa_stg_state_port_set(uint32_t port_id, uint16_t vlan_id,
+                                         std::string state) noexcept {
   int rv;
-  int stg_id = lookup_stpid(vlan_bitmap);
+  int stg_id = lookup_stpid(vlan_id);
 
   rv = ofdpa->ofdpaStgStatePortSet(port_id, state, stg_id);
   if (rv < 0) {
@@ -2197,4 +2191,17 @@ int controller::ofdpa_stg_state_port_set(uint32_t port_id,
 
   return rv;
 }
+
+int controller::ofdpa_global_stp_state_port_set(uint32_t port_id,
+                             std::string state) noexcept {
+  int rv;
+
+  rv = ofdpa->ofdpaGlobalStpStatePortSet(port_id, state);
+  if (rv < 0) {
+    LOG(ERROR) << __FUNCTION__ << ": failed to set the STP state";
+  }
+
+  return rv;
+}
+
 } // namespace basebox

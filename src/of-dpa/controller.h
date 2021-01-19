@@ -67,7 +67,7 @@ public:
   }
 
   ~controller() override {}
-  int lookup_stpid(uint32_t *vlan_id) noexcept;
+  int lookup_stpid(uint32_t vlan_id) noexcept;
 
 protected:
   void handle_conn_established(rofl::crofdpt &dpt,
@@ -309,8 +309,10 @@ public:
   int ofdpa_stg_create(uint16_t vlan_id) noexcept override;
   int ofdpa_stg_destroy(uint16_t vlan_id) noexcept override;
 
-  int ofdpa_stg_state_port_set(uint32_t port_id,
-                               std::string state, uint32_t *vlan_bitmap=nullptr) noexcept override;
+  int ofdpa_stg_state_port_set(uint32_t port_id, uint16_t vlan_id,
+                               std::string state) noexcept override;
+  int ofdpa_global_stp_state_port_set(uint32_t port_id,
+                               std::string state) noexcept override;
 
   /* print this */
   friend std::ostream &operator<<(std::ostream &os, const controller &box) {
