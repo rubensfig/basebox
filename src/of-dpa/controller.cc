@@ -2179,7 +2179,7 @@ int controller::ofdpa_stg_create(uint16_t vlan_id) noexcept {
   if (stg_id != 0)
     return stg_id;
 
-  rv = ofdpa->ofdpaStgCreate(current_stg++);
+  rv = ofdpa->ofdpaStgCreate(current_stg);
   if (rv < 0) {
     LOG(ERROR) << __FUNCTION__ << ": failed to create the STP group";
     return rv;
@@ -2193,6 +2193,8 @@ int controller::ofdpa_stg_create(uint16_t vlan_id) noexcept {
   }
 
   vlan_to_stg.emplace(std::make_pair(vlan_id, current_stg));
+
+  current_stg++;
   return rv;
 }
 
