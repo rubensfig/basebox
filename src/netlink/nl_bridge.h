@@ -36,6 +36,76 @@ class switch_interface;
 class tap_manager;
 struct packet;
 
+struct key {
+  int port_id;
+  uint16_t vid;
+
+  key(int port_id, uint16_t vid) : port_id(port_id), vid(vid) {}
+  bool operator<(const struct key &rhs) const {
+    return std::tie(port_id, vid) < std::tie(rhs.port_id, rhs.vid);
+  }
+};
+
+struct bridge_stp_states {
+  // Global STP state: KEY : port_id + vid, state
+  std::map<struct key, uint8_t> stp_states;
+
+  bridge_stp_states () = default;
+  void add_pvlan_state(int port_id, uint16_t vlan_id, uint8_t state) {
+    struct key k(port_id, vlan_id);
+    stp_states.emplace(std::make_pair(k, state));
+  }
+
+  void add_global_state(int port_id, uint8_t state) {
+    struct key k(port_id, 0);
+    stp_states.emplace(std::make_pair(k, state));
+  }
+
+  uint8_t get_global_state(int port_id) {
+    struct key k(port_id, 0);
+    auto it = stp_states.find(k);
+
+    return (it == stp_states.end()) ? 0 : it->second;
+  }
+
+  uint8_t get_pvlan_state(int port_id, uint16_t vid) {
+    struct key k(port_id, vid);
+    auto it = stp_states.find(k);
+
+    return (it == stp_states.end()) ? 0 : it->second;
+  }
+
+  uint8_t get_min(uint8_t g_state, uint8_t pv_state) {
+    return (g_state < pv_state) ? g_state : pv_state;
+  }
+
+  std::list<std::pair<uint16_t, uint8_t>> get_min_states(int port_id) {
+    int g_state = get_global_state(port_id);
+    struct key k(port_id, 0);
+
+    std::list<std::pair<uint16_t, uint8_t>> ret;
+    for (auto it = stp_states.lower_bound(k); it->first.port_id == port_id; it = std::next(it, 1)) {
+      auto p = std::make_pair(it->first.vid, get_min(g_state, it->second));
+      ret.emplace_back(p);
+    }
+
+    return ret;
+  }
+
+  uint8_t get_min_state(int port_id, uint16_t vid) {
+    int g_state = get_global_state(port_id);
+    int pv_state = get_pvlan_state(port_id, vid);
+
+    if (pv_state == 0)
+      return 0;
+
+    if (g_state == 3)
+      return g_state;
+
+    return get_min(g_state, pv_state);
+  }
+};
+
 class nl_bridge {
 public:
   nl_bridge(switch_interface *sw, std::shared_ptr<tap_manager> tap_man,
@@ -89,7 +159,9 @@ public:
                           const uint32_t tunnel_id, bool add);
 
 private:
+  struct bridge_stp_states bridge_stp_states;
   std::string stp_state_to_string(uint8_t state);
+
   void update_vlans(rtnl_link *, rtnl_link *);
 
   void update_access_ports(rtnl_link *vxlan_link, rtnl_link *br_link,

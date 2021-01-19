@@ -220,8 +220,15 @@ void nl_bridge::update_interface(rtnl_link *old_link, rtnl_link *new_link) {
     LOG(INFO) << __FUNCTION__ << " STP state changed, old=" << old_state
               << " new=" << new_state;
 
-    state = stp_state_to_string(new_state);
     auto port_id = nl->get_port_id(new_link);
+    if(bridge_stp_states.get_global_state(port_id) == 0)
+      bridge_stp_states.add_global_state(port_id, new_state);
+
+    auto pv_states = bridge_stp_states.get_min_states(port_id);
+    for (auto it : pv_states)
+      sw->ofdpa_stg_state_port_set(port_id,  it.first, stp_state_to_string(it.second));
+
+    state = stp_state_to_string(new_state);
     if (nbi::get_port_type(port_id) == nbi::port_type_lag) {
       auto members = nl->get_bond_members_by_lag(new_link);
       for (auto mem : members) {
@@ -1062,15 +1069,10 @@ int nl_bridge::mdb_entry_remove(rtnl_mdb *mdb_entry) {
 int nl_bridge::set_pvlan_stp(struct rtnl_bridge_vlan *bvlan_info) {
   int err = 0;
   uint32_t ifindex = rtnl_bridge_vlan_get_ifindex(bvlan_info);
+  int port_id = nl->get_port_id(ifindex);
   struct rtnl_bvlan_entry *entry = rtnl_bridge_vlan_get_entry_head(bvlan_info);
   uint16_t vlan_id = rtnl_bridge_vlan_entry_get_vlan_id(entry);
-  std::string stp_state =
-      stp_state_to_string(rtnl_bridge_vlan_entry_get_state(entry));
-
-  if (vlan_id == 1) {
-    VLOG(1) << __FUNCTION__ << ": skipping setting VLAN=1 state";
-    return err;
-  }
+  uint8_t stp_state = rtnl_bridge_vlan_entry_get_state(entry);
 
   if (is_bridge_interface(ifindex))
     return err;
@@ -1079,7 +1081,13 @@ int nl_bridge::set_pvlan_stp(struct rtnl_bridge_vlan *bvlan_info) {
   if (err < 0)
     return err;
 
-  err = sw->ofdpa_stg_state_port_set(nl->get_port_id(ifindex), vlan_id, stp_state);
+  auto g_stp_state = bridge_stp_states.get_min_state(port_id, vlan_id);
+  if(g_stp_state == 0)
+    bridge_stp_states.add_pvlan_state(port_id, vlan_id, stp_state);
+  else
+    stp_state = g_stp_state;
+
+  err = sw->ofdpa_stg_state_port_set(nl->get_port_id(ifindex), vlan_id, stp_state_to_string(stp_state));
   if (err < 0)
     return err;
 
