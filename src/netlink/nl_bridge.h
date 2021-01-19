@@ -47,6 +47,7 @@ public:
   int set_pvlan_stp(struct rtnl_bridge_vlan *bvlan_info);
 
   void set_bridge_interface(rtnl_link *);
+  bool nl_bridge::is_bridge_interface(int ifindex);
   bool is_bridge_interface(rtnl_link *);
 
   void add_interface(rtnl_link *);

@@ -68,7 +68,17 @@ void nl_bridge::set_bridge_interface(rtnl_link *bridge) {
                << " unsupported: bridge configured with vlan_filtering 0";
 }
 
+bool nl_bridge::is_bridge_interface(int ifindex) {
+  assert(bridge);
+
+  if (ifindex != rtnl_link_get_ifindex(bridge))
+    return false;
+
+  return true;
+}
+
 bool nl_bridge::is_bridge_interface(rtnl_link *link) {
+  assert(bridge);
   assert(link);
 
   if (rtnl_link_get_ifindex(link) != rtnl_link_get_ifindex(bridge))
@@ -352,7 +362,7 @@ void nl_bridge::update_vlans(rtnl_link *old_link, rtnl_link *new_link) {
     uint32_t b = new_br_vlan->vlan_bitmap[k];
     uint32_t vlan_diff = a ^ b;
 
-#if 0 // untagged change not yet implemented
+#if 0  // untagged change not yet implemented
     uint32_t c = old_br_vlan->untagged_bitmap[k];
     uint32_t d = new_br_vlan->untagged_bitmap[k];
     uint32_t untagged_diff = c ^ d;
@@ -372,8 +382,8 @@ void nl_bridge::update_vlans(rtnl_link *old_link, rtnl_link *new_link) {
         if (new_br_vlan->untagged_bitmap[k] & 1 << (j - 1)) {
           egress_untagged = true;
 
-#if 0 // untagged change not yet implemented
-      // clear untagged_diff bit
+#if 0  // untagged change not yet implemented
+       // clear untagged_diff bit
           untagged_diff &= ~((uint32_t)1 << (j - 1));
 #endif // 0
         }
@@ -1048,7 +1058,7 @@ int nl_bridge::mdb_entry_remove(rtnl_mdb *mdb_entry) {
   return rv;
 }
 
-//struct rtnl_bridge_vlan {
+// struct rtnl_bridge_vlan {
 //	NLHDR_COMMON
 //	uint32_t ifindex;
 //	uint8_t family;
@@ -1058,41 +1068,50 @@ int nl_bridge::mdb_entry_remove(rtnl_mdb *mdb_entry) {
 //	uint16_t range;
 //	uint8_t state;
 int nl_bridge::set_pvlan_stp(struct rtnl_bridge_vlan *bvlan_info) {
-	int err = 0;
+  int err = 0;
   uint32_t ifindex = rtnl_bridge_vlan_get_ifindex(bvlan_info);
-	uint16_t vlan_id = rtnl_bridge_vlan_get_vlan_id(bvlan_info);
-	std::string state = stp_state_to_string(rtnl_bridge_vlan_get_state(bvlan_info));
+  uint16_t vlan_id = rtnl_bridge_vlan_get_vlan_id(bvlan_info);
+  std::string state =
+      stp_state_to_string(rtnl_bridge_vlan_get_state(bvlan_info));
 
-	sw->ofdpa_stg_create(vlan_id);
-  sw->ofdpa_stg_state_port_set(nl->get_port_id(ifindex), vlan_id, state);
+  if (is_bridge_interface(ifindex))
+    return err;
 
-	LOG(INFO) << __FUNCTION__ << ": set state=" << state << " VLAN =" << vlan_id;
-	return err;
+  err = sw->ofdpa_stg_create(vlan_id);
+  if (err < 0)
+    return err;
+
+  err = sw->ofdpa_stg_state_port_set(nl->get_port_id(ifindex), vlan_id, state);
+  if (err < 0)
+    return err;
+
+  LOG(INFO) << __FUNCTION__ << ": set state=" << state << " VLAN =" << vlan_id;
+  return err;
 }
 
 std::string nl_bridge::stp_state_to_string(uint8_t state) {
-	std::string ret;
-	switch (state) {
-	case BR_STATE_FORWARDING:
-		ret = "forward";
-		break;
-	case BR_STATE_BLOCKING:
-		ret = "block";
-		break;
-	case BR_STATE_DISABLED:
-		ret = "disable";
-		break;
-	case BR_STATE_LISTENING:
-		ret = "listen";
-		break;
-	case BR_STATE_LEARNING:
-		ret = "learn";
-		break;
-	default:
-		ret = "";
-	}
+  std::string ret;
+  switch (state) {
+  case BR_STATE_FORWARDING:
+    ret = "forward";
+    break;
+  case BR_STATE_BLOCKING:
+    ret = "block";
+    break;
+  case BR_STATE_DISABLED:
+    ret = "disable";
+    break;
+  case BR_STATE_LISTENING:
+    ret = "listen";
+    break;
+  case BR_STATE_LEARNING:
+    ret = "learn";
+    break;
+  default:
+    ret = "";
+  }
 
-    	return ret;
+  return ret;
 }
 
 } /* namespace basebox */

@@ -298,7 +298,8 @@ ofdpa_client::ofdpaTunnelPortTenantDelete(uint32_t port_id,
 }
 
 ofdpa::OfdpaStatus::OfdpaStatusCode
-ofdpa_client::ofdpaStgStatePortSet(uint32_t port_id, std::string state, uint32_t stg_id) {
+ofdpa_client::ofdpaStgStatePortSet(uint32_t port_id, std::string state,
+                                   uint32_t stg_id) {
   ::OfdpaStatus response;
   ::ClientContext context;
   ::StpInterfaceState request;
@@ -317,8 +318,8 @@ ofdpa_client::ofdpaStgStatePortSet(uint32_t port_id, std::string state, uint32_t
   return response.status();
 }
 
-ofdpa::OfdpaStatus::OfdpaStatusCode ofdpa_client::ofdpaGlobalStpStatePortSet(uint32_t port_id,
-                                                         std::string state) {
+ofdpa::OfdpaStatus::OfdpaStatusCode
+ofdpa_client::ofdpaGlobalStpStatePortSet(uint32_t port_id, std::string state) {
   ::OfdpaStatus response;
   ::ClientContext context;
   ::StpInterfaceState request;
@@ -336,7 +337,8 @@ ofdpa::OfdpaStatus::OfdpaStatusCode ofdpa_client::ofdpaGlobalStpStatePortSet(uin
   return response.status();
 }
 
-ofdpa::OfdpaStatus::OfdpaStatusCode ofdpa_client::ofdpaStgCreate(uint16_t stg_id) {
+ofdpa::OfdpaStatus::OfdpaStatusCode
+ofdpa_client::ofdpaStgCreate(uint16_t stg_id) {
   ::OfdpaStatus response;
   ::ClientContext context;
   ::StgId request;
@@ -348,12 +350,12 @@ ofdpa::OfdpaStatus::OfdpaStatusCode ofdpa_client::ofdpaStgCreate(uint16_t stg_id
   if (not rv.ok()) {
     return ofdpa::OfdpaStatus::OFDPA_E_RPC;
   }
-  
+
   return response.status();
 }
 
-
-ofdpa::OfdpaStatus::OfdpaStatusCode ofdpa_client::ofdpaStgVlanAdd(uint16_t vlanid, uint32_t stgid) {
+ofdpa::OfdpaStatus::OfdpaStatusCode
+ofdpa_client::ofdpaStgVlanAdd(uint16_t vlanid, uint32_t stgid) {
   ::OfdpaStatus response;
   ::ClientContext context;
   ::StgVlan request;
@@ -370,7 +372,8 @@ ofdpa::OfdpaStatus::OfdpaStatusCode ofdpa_client::ofdpaStgVlanAdd(uint16_t vlani
   return response.status();
 }
 
-ofdpa::OfdpaStatus::OfdpaStatusCode ofdpa_client::ofdpaStgVlanRemove(uint16_t vlan_id, uint32_t stg_id) {
+ofdpa::OfdpaStatus::OfdpaStatusCode
+ofdpa_client::ofdpaStgVlanRemove(uint16_t vlan_id, uint32_t stg_id) {
   ::OfdpaStatus response;
   ::ClientContext context;
 

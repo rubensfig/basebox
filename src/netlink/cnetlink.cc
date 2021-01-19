@@ -181,7 +181,7 @@ void cnetlink::init_caches() {
 
   /* init bridge-vlan cache */
   rc = rtnl_bridge_vlan_alloc_cache_flags(sock_mon, &caches[NL_BVLAN_CACHE],
-                                    NL_CACHE_AF_ITER);
+                                          NL_CACHE_AF_ITER);
   if (0 != rc) {
     LOG(FATAL) << __FUNCTION__
                << ": rtnl_bridge_vlan_alloc_cache_flags failed rc=" << rc;
@@ -1452,13 +1452,15 @@ void cnetlink::route_bridge_vlan_apply(const nl_obj &obj) {
 
   switch (obj.get_msg_type()) {
   case RTM_NEWVLAN:
-	if (bridge)
-		bridge->set_pvlan_stp(BRIDGE_VLAN_CAST(obj.get_new_obj()));
-	break;
+    if (bridge)
+      bridge->set_pvlan_stp(BRIDGE_VLAN_CAST(obj.get_new_obj()));
+    break;
+#if 0
   case RTM_DELVLAN:
 	if (bridge)
 	        bridge->set_pvlan_stp(BRIDGE_VLAN_CAST(obj.get_new_obj()));
 	break;
+#endif
   default:
     LOG(ERROR) << __FUNCTION__ << ": invalid action " << obj.get_action();
     break;
