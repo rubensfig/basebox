@@ -221,8 +221,7 @@ void nl_bridge::update_interface(rtnl_link *old_link, rtnl_link *new_link) {
               << " new=" << new_state;
 
     auto port_id = nl->get_port_id(new_link);
-    if (bridge_stp_states.get_global_state(port_id) == 0)
-      bridge_stp_states.add_global_state(port_id, new_state);
+    bridge_stp_states.add_global_state(port_id, new_state);
 
     auto pv_states = bridge_stp_states.get_min_states(port_id);
     for (auto it : pv_states)

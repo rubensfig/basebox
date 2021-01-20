@@ -48,49 +48,41 @@ struct key {
 
 struct bridge_stp_states {
   // Global STP state: KEY : port_id + vid, state
-  std::map<struct key, uint8_t> stp_states;
+  std::map<int, uint8_t> gl_states;
+  std::map<uint16_t, std::map<uint16_t, uint8_t>> pv_states;
 
   bridge_stp_states() = default;
   void add_pvlan_state(int port_id, uint16_t vlan_id, uint8_t state) {
-    struct key k(port_id, vlan_id);
-    stp_states.emplace(std::make_pair(k, state));
+    pv_states.emplace(vlan_id, std::make_pair(port_id, state));
   }
 
   void add_global_state(int port_id, uint8_t state) {
-    struct key k(port_id, 0);
-    stp_states.emplace(std::make_pair(k, state));
+    gl_states.emplace(port_id, state);
   }
 
   uint8_t get_global_state(int port_id) {
-    struct key k(port_id, 0);
-    auto it = stp_states.find(k);
+    auto it = gl_states.find(port_id);
 
-    return (it == stp_states.end()) ? 0 : it->second;
+    return (it == gl_states.end()) ? 0 : it->second;
   }
 
   uint8_t get_pvlan_state(int port_id, uint16_t vid) {
-    struct key k(port_id, vid);
-    auto it = stp_states.find(k);
+    auto it = pv_states.find(port_id);
 
-    return (it == stp_states.end()) ? 0 : it->second;
+    // no port found
+    if (it == pv_states.end())
+      return 0;
+
+    // no vlan found
+    auto pv_state = it->second.find(vid);
+    if (pv_state == it->second.end())
+      return 0;
+
+    return pv_state->second;
   }
 
   uint8_t get_min(uint8_t g_state, uint8_t pv_state) {
     return (g_state < pv_state) ? g_state : pv_state;
-  }
-
-  std::list<std::pair<uint16_t, uint8_t>> get_min_states(int port_id) {
-    int g_state = get_global_state(port_id);
-    struct key k(port_id, 0);
-
-    std::list<std::pair<uint16_t, uint8_t>> ret;
-    for (auto it = stp_states.lower_bound(k); it->first.port_id == port_id;
-         it = std::next(it, 1)) {
-      auto p = std::make_pair(it->first.vid, get_min(g_state, it->second));
-      ret.emplace_back(p);
-    }
-
-    return ret;
   }
 
   uint8_t get_min_state(int port_id, uint16_t vid) {
