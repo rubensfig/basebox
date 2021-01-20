@@ -1087,7 +1087,7 @@ int nl_bridge::set_pvlan_stp(struct rtnl_bridge_vlan *bvlan_info) {
 
   auto g_stp_state = bridge_stp_states.get_min_state(port_id, vlan_id);
 
-  LOG(INFO) << __FUNCTION__ << ": set state=" << stp_state
+  LOG(INFO) << __FUNCTION__ << ": set state=" << g_stp_state
             << " VLAN =" << vlan_id;
 
   err = sw->ofdpa_stg_state_port_set(nl->get_port_id(ifindex), vlan_id,
