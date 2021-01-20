@@ -15,6 +15,12 @@
 
 #include "netlink-utils.h"
 
+#define BR_STATE_DISABLED 0
+#define BR_STATE_LISTENING 1
+#define BR_STATE_LEARNING 2
+#define BR_STATE_FORWARDING 3
+#define BR_STATE_BLOCKING 4
+
 extern "C" {
 struct rtnl_bridge_vlan;
 struct rtnl_link;
@@ -114,7 +120,7 @@ struct bridge_stp_states {
     if (pv_state == 0)
       return 0;
 
-    if (g_state == 3)
+    if (g_state == BR_STATE_BLOCKING || pv_state == BR_STATE_BLOCKING)
       return g_state;
 
     return get_min(g_state, pv_state);
