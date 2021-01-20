@@ -1087,13 +1087,14 @@ int nl_bridge::set_pvlan_stp(struct rtnl_bridge_vlan *bvlan_info) {
 
   auto g_stp_state = bridge_stp_states.get_min_state(port_id, vlan_id);
 
+  LOG(INFO) << __FUNCTION__ << ": set state=" << stp_state
+            << " VLAN =" << vlan_id;
+
   err = sw->ofdpa_stg_state_port_set(nl->get_port_id(ifindex), vlan_id,
                                      stp_state_to_string(g_stp_state));
   if (err < 0)
     return err;
 
-  LOG(INFO) << __FUNCTION__ << ": set state=" << stp_state
-            << " VLAN =" << vlan_id;
   return err;
 }
 
