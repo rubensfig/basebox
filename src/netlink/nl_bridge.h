@@ -68,11 +68,9 @@ struct bridge_stp_states {
     }
 
     auto pv_it = it->second.find(vlan_id);
-    if (pv_it == it->second.end()) {
-      it->second.emplace(port_id, state);
-    }
+    if (pv_it != it->second.end())
+      pv_it = it->second.erase(pv_it);
 
-    pv_it = it->second.erase(pv_it);
     it->second.emplace(port_id, state);
   }
 
