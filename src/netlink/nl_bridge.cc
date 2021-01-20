@@ -221,12 +221,13 @@ void nl_bridge::update_interface(rtnl_link *old_link, rtnl_link *new_link) {
               << " new=" << new_state;
 
     auto port_id = nl->get_port_id(new_link);
-    if(bridge_stp_states.get_global_state(port_id) == 0)
+    if (bridge_stp_states.get_global_state(port_id) == 0)
       bridge_stp_states.add_global_state(port_id, new_state);
 
     auto pv_states = bridge_stp_states.get_min_states(port_id);
     for (auto it : pv_states)
-      sw->ofdpa_stg_state_port_set(port_id,  it.first, stp_state_to_string(it.second));
+      sw->ofdpa_stg_state_port_set(port_id, it.first,
+                                   stp_state_to_string(it.second));
 
     state = stp_state_to_string(new_state);
     if (nbi::get_port_type(port_id) == nbi::port_type_lag) {
@@ -1081,17 +1082,19 @@ int nl_bridge::set_pvlan_stp(struct rtnl_bridge_vlan *bvlan_info) {
   if (err < 0)
     return err;
 
-  auto g_stp_state = bridge_stp_states.get_min_state(port_id, vlan_id);
-  if(g_stp_state == 0)
+  int pv_state = bridge_stp_states.get_pvlan_state(port_id, vlan_id, stp_state);
+  if (pv_state == 0)
     bridge_stp_states.add_pvlan_state(port_id, vlan_id, stp_state);
-  else
-    stp_state = g_stp_state;
 
-  err = sw->ofdpa_stg_state_port_set(nl->get_port_id(ifindex), vlan_id, stp_state_to_string(stp_state));
+  auto g_stp_state = bridge_stp_states.get_min_state(port_id, vlan_id);
+
+  err = sw->ofdpa_stg_state_port_set(nl->get_port_id(ifindex), vlan_id,
+                                     stp_state_to_string(g_stp_state));
   if (err < 0)
     return err;
 
-  LOG(INFO) << __FUNCTION__ << ": set state=" << stp_state << " VLAN =" << vlan_id;
+  LOG(INFO) << __FUNCTION__ << ": set state=" << stp_state
+            << " VLAN =" << vlan_id;
   return err;
 }
 

@@ -50,7 +50,7 @@ struct bridge_stp_states {
   // Global STP state: KEY : port_id + vid, state
   std::map<struct key, uint8_t> stp_states;
 
-  bridge_stp_states () = default;
+  bridge_stp_states() = default;
   void add_pvlan_state(int port_id, uint16_t vlan_id, uint8_t state) {
     struct key k(port_id, vlan_id);
     stp_states.emplace(std::make_pair(k, state));
@@ -84,7 +84,8 @@ struct bridge_stp_states {
     struct key k(port_id, 0);
 
     std::list<std::pair<uint16_t, uint8_t>> ret;
-    for (auto it = stp_states.lower_bound(k); it->first.port_id == port_id; it = std::next(it, 1)) {
+    for (auto it = stp_states.lower_bound(k); it->first.port_id == port_id;
+         it = std::next(it, 1)) {
       auto p = std::make_pair(it->first.vid, get_min(g_state, it->second));
       ret.emplace_back(p);
     }
