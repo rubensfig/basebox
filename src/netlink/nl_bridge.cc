@@ -224,9 +224,15 @@ void nl_bridge::update_interface(rtnl_link *old_link, rtnl_link *new_link) {
     bridge_stp_states.add_global_state(port_id, new_state);
 
     auto pv_states = bridge_stp_states.get_min_states(port_id);
-    for (auto it : pv_states)
-      sw->ofdpa_stg_state_port_set(port_id, it.first,
-                                   stp_state_to_string(it.second));
+    if (!pv_states.empty()) {
+
+      LOG(INFO) << __FUNCTION__ << ": set state=" << it.second
+                << " VLAN =" << it.first;
+
+      for (auto it : pv_states)
+        sw->ofdpa_stg_state_port_set(port_id, it.first,
+                                     stp_state_to_string(it.second));
+    }
 
     state = stp_state_to_string(new_state);
     if (nbi::get_port_type(port_id) == nbi::port_type_lag) {
