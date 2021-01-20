@@ -104,11 +104,15 @@ struct bridge_stp_states {
   }
 
   std::map<uint16_t, uint8_t> get_min_states(int port_id) { 
-    auto it = pv_states.find(port_id);
-    if (it != pv_states.end())
-      return it->second;
+    std::map<uint16_t, uint8_t> ret;
+    for (auto it: pv_states) {
+      auto pv_it = it.second.find(port_id);
+      if (pv_it == it.second.end())
+        continue;
 
-    return {};
+      ret.emplace(it.first, pv_it->second);
+    }
+    return ret;
   }
 
   uint8_t get_min_state(int port_id, uint16_t vid) {
