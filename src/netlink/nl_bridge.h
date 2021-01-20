@@ -53,7 +53,21 @@ struct bridge_stp_states {
 
   bridge_stp_states() = default;
   void add_pvlan_state(int port_id, uint16_t vlan_id, uint8_t state) {
-    pv_states.emplace(vlan_id, std::make_pair(port_id, state));
+    auto it = pv_states.find(vlan_id);
+    if (it == pv_states.end()) {
+      std::map<uint16_t, uint8_t> pv_map;
+      pv_map.emplace(port_id, state);
+      pv_states.emplace(vlan_id, pv_map);
+      return;
+    }
+
+    auto pv_it = it->second.find(vlan_id);
+    if (pv_it == it->second.end()) {
+      it->second.emplace(port_id, state);
+    }
+
+    pv_it = it->second.erase(pv_it);
+    it->second.emplace(port_id, state);
   }
 
   void add_global_state(int port_id, uint8_t state) {
@@ -83,6 +97,14 @@ struct bridge_stp_states {
 
   uint8_t get_min(uint8_t g_state, uint8_t pv_state) {
     return (g_state < pv_state) ? g_state : pv_state;
+  }
+
+  std::map<uint16_t, uint8_t> get_min_states(int port_id) { 
+    auto it = pv_states.find(port_id);
+    if (it != pv_states.end())
+      return it->second;
+
+    return {};
   }
 
   uint8_t get_min_state(int port_id, uint16_t vid) {
