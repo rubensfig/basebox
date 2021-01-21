@@ -119,7 +119,7 @@ struct bridge_stp_states {
     return ret;
   }
 
-  uint8_t get_min_state(int port_id, uint16_t vid) {
+  int get_min_state(int port_id, uint16_t vid) {
     int g_state = get_global_state(port_id);
     int pv_state = get_pvlan_state(port_id, vid);
 
