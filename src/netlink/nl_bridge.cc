@@ -81,6 +81,13 @@ bool nl_bridge::is_bridge_interface(rtnl_link *link) {
   return is_bridge_interface(rtnl_link_get_ifindex(link));
 }
 
+// Read sysfs to obtain the value for the stp_state on the kernel
+uint32_t nl_bridge::get_stp_state() {
+  std::string portname(rtnl_link_get_name(bridge));
+  return nl->load_from_file(
+      "/sys/class/net/" + portname + "/bridge/stp_state");
+}
+
 // Read sysfs to obtain the value for the VLAN protocol on the switch.
 // Only two values are suported: 0x8100 and 0x88a8
 uint32_t nl_bridge::get_vlan_proto() {

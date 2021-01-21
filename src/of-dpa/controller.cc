@@ -2201,6 +2201,7 @@ int controller::ofdpa_stg_create(uint16_t vlan_id) noexcept {
 int controller::ofdpa_global_stp_state_port_set(uint32_t port_id,
                                                 std::string state) noexcept {
   int rv;
+  int stg_id = lookup_stpid(vlan_bitmap);
 
   rv = ofdpa->ofdpaGlobalStpStatePortSet(port_id, state);
   if (rv < 0) {
