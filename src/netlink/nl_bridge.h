@@ -80,7 +80,7 @@ struct bridge_stp_states {
 
   void add_global_state(int port_id, uint8_t state) {
     auto it = gl_states.find(port_id);
-    if (it == gl_states.end())
+    if (it != gl_states.end())
       gl_states.erase(it);
 
     gl_states.emplace(port_id, state);
