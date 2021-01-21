@@ -82,6 +82,9 @@ bool nl_bridge::is_bridge_interface(rtnl_link *link) {
 }
 
 // Read sysfs to obtain the value for the stp_state on the kernel
+// TODO Expose vlan_proto, stp_state and vlan_filtering on libnl
+// These values are obtained by IFLA_BR_* messages
+// /include/uapi/linux/if_link.h#L426
 uint32_t nl_bridge::get_stp_state() {
   std::string portname(rtnl_link_get_name(bridge));
   return nl->load_from_file(
@@ -224,6 +227,9 @@ void nl_bridge::update_interface(rtnl_link *old_link, rtnl_link *new_link) {
   std::string state;
 
   if (old_state != new_state) {
+    if (rtnl_link_bridge_get_stp_state(new_link) == STP_STATE_DISABLED)
+      return;
+
     LOG(INFO) << __FUNCTION__ << " STP state changed, old=" << old_state
               << " new=" << new_state;
 
@@ -1075,6 +1081,10 @@ int nl_bridge::mdb_entry_remove(rtnl_mdb *mdb_entry) {
 //	uint8_t state;
 int nl_bridge::set_pvlan_stp(struct rtnl_bridge_vlan *bvlan_info) {
   int err = 0;
+
+  if (rtnl_link_bridge_get_stp_state(bridge) == STP_STATE_DISABLED)
+    return err;
+
   uint32_t ifindex = rtnl_bridge_vlan_get_ifindex(bvlan_info);
   int port_id = nl->get_port_id(ifindex);
   struct rtnl_bvlan_entry *entry = rtnl_bridge_vlan_get_entry_head(bvlan_info);

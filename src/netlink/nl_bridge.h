@@ -21,6 +21,10 @@
 #define BR_STATE_FORWARDING 3
 #define BR_STATE_BLOCKING 4
 
+#define STP_STATE_DISABLED 0
+#define STP_STATE_KERNEL 1
+#define STP_STATE_USERSPACE 2
+
 extern "C" {
 struct rtnl_bridge_vlan;
 struct rtnl_link;
