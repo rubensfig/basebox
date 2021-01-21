@@ -89,14 +89,14 @@ struct bridge_stp_states {
   }
 
   uint8_t get_pvlan_state(int port_id, uint16_t vid) {
-    auto it = pv_states.find(port_id);
+    auto it = pv_states.find(vid);
 
-    // no port found
+    // no vlan found
     if (it == pv_states.end())
       return 0;
 
-    // no vlan found
-    auto pv_state = it->second.find(vid);
+    // no port found
+    auto pv_state = it->second.find(port_id);
     if (pv_state == it->second.end())
       return 0;
 
