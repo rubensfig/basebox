@@ -14,6 +14,7 @@
 #include <linux/if.h>
 #include <netlink/object.h>
 #include <netlink/route/addr.h>
+#include <netlink/route/bridge_vlan.h>
 #include <netlink/route/link.h>
 #include <netlink/route/link/bonding.h>
 #include <netlink/route/link/vlan.h>
@@ -178,6 +179,19 @@ void cnetlink::init_caches() {
   }
 #endif
 
+  /* init bridge-vlan cache */
+  rc = rtnl_bridge_vlan_alloc_cache_flags(sock_mon, &caches[NL_BVLAN_CACHE],
+                                          NL_CACHE_AF_ITER);
+  if (0 != rc) {
+    LOG(FATAL) << __FUNCTION__
+               << ": rtnl_bridge_vlan_alloc_cache_flags failed rc=" << rc;
+  }
+  rc = nl_cache_mngr_add_cache_v2(mngr, caches[NL_BVLAN_CACHE],
+                                  (change_func_v2_t)&nl_cb_v2, this);
+  if (0 != rc) {
+    LOG(FATAL) << __FUNCTION__ << ": add route/bridge-vlan to cache mngr";
+  }
+
   try {
     thread.add_read_fd(this, nl_cache_mngr_get_fd(mngr), true, false);
   } catch (std::exception &e) {
@@ -257,11 +271,12 @@ struct rtnl_link *cnetlink::get_link(int ifindex, int family) const {
   rtnl_link_set_family(filter.get(), family);
 
   // search link by filter
-  nl_cache_foreach_filter(caches[NL_LINK_CACHE], OBJ_CAST(filter.get()),
-                          [](struct nl_object *obj, void *arg) {
-                            *static_cast<nl_object **>(arg) = obj;
-                          },
-                          &_link);
+  nl_cache_foreach_filter(
+      caches[NL_LINK_CACHE], OBJ_CAST(filter.get()),
+      [](struct nl_object *obj, void *arg) {
+        *static_cast<nl_object **>(arg) = obj;
+      },
+      &_link);
 
   if (_link == nullptr) {
     // check the garbage
@@ -280,9 +295,8 @@ struct rtnl_link *cnetlink::get_link(int ifindex, int family) const {
   return _link;
 }
 
-void cnetlink::get_bridge_ports(int br_ifindex,
-                                std::deque<rtnl_link *> *link_list) const
-    noexcept {
+void cnetlink::get_bridge_ports(
+    int br_ifindex, std::deque<rtnl_link *> *link_list) const noexcept {
   assert(link_list);
 
   if (!bridge)
@@ -295,17 +309,16 @@ void cnetlink::get_bridge_ports(int br_ifindex,
   rtnl_link_set_family(filter.get(), AF_BRIDGE);
   rtnl_link_set_master(filter.get(), br_ifindex);
 
-  nl_cache_foreach_filter(caches[NL_LINK_CACHE], OBJ_CAST(filter.get()),
-                          [](struct nl_object *obj, void *arg) {
-                            assert(arg);
-                            auto *list =
-                                static_cast<std::deque<rtnl_link *> *>(arg);
+  nl_cache_foreach_filter(
+      caches[NL_LINK_CACHE], OBJ_CAST(filter.get()),
+      [](struct nl_object *obj, void *arg) {
+        assert(arg);
+        auto *list = static_cast<std::deque<rtnl_link *> *>(arg);
 
-                            VLOG(3) << __FUNCTION__ << ": found bridge port "
-                                    << obj;
-                            list->push_back(LINK_CAST(obj));
-                          },
-                          link_list);
+        VLOG(3) << __FUNCTION__ << ": found bridge port " << obj;
+        list->push_back(LINK_CAST(obj));
+      },
+      link_list);
 
   // check the garbage
   for (auto &obj : nl_objs) {
@@ -348,8 +361,8 @@ int cnetlink::add_l3_addr(struct rtnl_addr *a) {
 
 int cnetlink::del_l3_addr(struct rtnl_addr *a) { return l3->del_l3_addr(a); }
 
-void cnetlink::get_vlans(int ifindex, std::deque<uint16_t> *vlan_list) const
-    noexcept {
+void cnetlink::get_vlans(int ifindex,
+                         std::deque<uint16_t> *vlan_list) const noexcept {
   assert(vlan_list);
 
   std::unique_ptr<rtnl_link, decltype(&rtnl_link_put)> filter(rtnl_link_alloc(),
@@ -360,19 +373,18 @@ void cnetlink::get_vlans(int ifindex, std::deque<uint16_t> *vlan_list) const
   rtnl_link_set_type(filter.get(), "vlan");
   rtnl_link_set_link(filter.get(), ifindex);
 
-  nl_cache_foreach_filter(caches[NL_LINK_CACHE], OBJ_CAST(filter.get()),
-                          [](struct nl_object *obj, void *arg) {
-                            assert(arg);
-                            auto *list =
-                                static_cast<std::deque<uint16_t> *>(arg);
-			    uint16_t vid;
+  nl_cache_foreach_filter(
+      caches[NL_LINK_CACHE], OBJ_CAST(filter.get()),
+      [](struct nl_object *obj, void *arg) {
+        assert(arg);
+        auto *list = static_cast<std::deque<uint16_t> *>(arg);
+        uint16_t vid;
 
-                            VLOG(3) << __FUNCTION__ << ": found vlan interface "
-                                    << obj;
-			    vid = rtnl_link_vlan_get_id(LINK_CAST(obj));
-                            list->push_back(vid);
-                          },
-                          vlan_list);
+        VLOG(3) << __FUNCTION__ << ": found vlan interface " << obj;
+        vid = rtnl_link_vlan_get_id(LINK_CAST(obj));
+        list->push_back(vid);
+      },
+      vlan_list);
 }
 
 struct rtnl_neigh *cnetlink::get_neighbour(int ifindex,
@@ -447,14 +459,14 @@ int cnetlink::get_port_id(int ifindex) const {
 
   int port_id = tap_man->get_port_id(ifindex);
   if (port_id > 0)
-	  return port_id;
+    return port_id;
 
   return bond->get_lag_id(ifindex);
 }
 
 int cnetlink::get_ifindex_by_port_id(uint32_t port_id) const {
 
-    return tap_man->get_ifindex(port_id);
+  return tap_man->get_ifindex(port_id);
 }
 
 uint16_t cnetlink::get_vrf_table_id(rtnl_link *link) {
@@ -536,6 +548,10 @@ void cnetlink::handle_wakeup(rofl::cthread &thread) {
       route_mdb_apply(obj);
       break;
 #endif
+    case RTM_NEWVLAN:
+    case RTM_DELVLAN:
+      route_bridge_vlan_apply(obj);
+      break;
     default:
       LOG(ERROR) << __FUNCTION__ << ": unexpected netlink type "
                  << obj.get_msg_type();
@@ -1103,36 +1119,39 @@ void cnetlink::link_updated(rtnl_link *old_link, rtnl_link *new_link) noexcept {
               << OBJ_CAST(
                      get_link_by_ifindex(rtnl_link_get_master(new_link)).get());
     // Lookup l3 addresses to delete
-    // We can delete the addresses on the interface because we will later receive a
-    // notification readding the addresses, that time with the correct VRF
+    // We can delete the addresses on the interface because we will later
+    // receive a notification readding the addresses, that time with the correct
+    // VRF
     std::deque<rtnl_addr *> addresses;
     get_l3_addrs(old_link, &addresses);
     for (auto i : addresses)
       l3->del_l3_addr(i);
 
     vlan->vrf_attach(old_link, new_link);
-    } break;
+  } break;
   case LT_VRF_SLAVE: {
     if (lt_new == LT_VLAN) {
       LOG(INFO) << __FUNCTION__ << ": freed vrf slave interface "
                 << OBJ_CAST(old_link);
 
       // Lookup l3 addresses to delete
-      // We can delete the addresses on the interface because we will later receive a
-      // notification readding the addresses, that time with the correct VRF
+      // We can delete the addresses on the interface because we will later
+      // receive a notification readding the addresses, that time with the
+      // correct VRF
       std::deque<rtnl_addr *> addresses;
       get_l3_addrs(old_link, &addresses);
-      // delete l3 addresses no longer associated with vrf 
-      for (auto i: addresses)
-          l3->del_l3_addr(i);
+      // delete l3 addresses no longer associated with vrf
+      for (auto i : addresses)
+        l3->del_l3_addr(i);
       vlan->vrf_detach(old_link, new_link);
     } else if (lt_new == LT_VRF_SLAVE) {
       LOG(INFO) << __FUNCTION__ << ": link updated " << OBJ_CAST(new_link);
       vlan->vrf_attach(old_link, new_link);
     }
     // TODO handle LT_TAP/LT_BOND, currently unimplemented
-    // happens when a bond/tap interface enslaved directly to a VRF and you set nomaster
-    } break;
+    // happens when a bond/tap interface enslaved directly to a VRF and you set
+    // nomaster
+  } break;
   case LT_TUN:
     if (lt_new == LT_BOND_SLAVE) {
       // XXX link enslaved
@@ -1422,6 +1441,26 @@ void cnetlink::route_mdb_apply(const nl_obj &obj) {
     if (bridge)
       bridge->mdb_entry_remove(MDB_CAST(obj.get_new_obj()));
     break;
+  default:
+    LOG(ERROR) << __FUNCTION__ << ": invalid action " << obj.get_action();
+    break;
+  }
+}
+
+void cnetlink::route_bridge_vlan_apply(const nl_obj &obj) {
+  assert(obj.get_new_obj());
+
+  switch (obj.get_msg_type()) {
+  case RTM_NEWVLAN:
+    if (bridge)
+      bridge->set_pvlan_stp(BRIDGE_VLAN_CAST(obj.get_new_obj()));
+    break;
+#if 0
+  case RTM_DELVLAN:
+	if (bridge)
+	        bridge->set_pvlan_stp(BRIDGE_VLAN_CAST(obj.get_new_obj()));
+	break;
+#endif
   default:
     LOG(ERROR) << __FUNCTION__ << ": invalid action " << obj.get_action();
     break;
