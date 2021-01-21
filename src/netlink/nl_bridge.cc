@@ -730,7 +730,7 @@ bool nl_bridge::is_mac_in_l2_cache(rtnl_neigh *n) {
       NEIGH_CAST(nl_cache_search(l2_cache.get(), OBJ_CAST(n))), rtnl_neigh_put);
 
   if (n_lookup) {
-    VLOG(2) << __FUNCTION__ << ": found existing l2_cache entry "
+    VLOG(3) << __FUNCTION__ << ": found existing l2_cache entry "
             << OBJ_CAST(n_lookup.get());
     return true;
   }
@@ -742,7 +742,7 @@ int nl_bridge::learn_source_mac(rtnl_link *br_link, packet *p) {
   // we still assume vlan filtering bridge
   assert(rtnl_link_get_family(br_link) == AF_BRIDGE);
 
-  VLOG(2) << __FUNCTION__ << ": pkt " << p << " on link " << OBJ_CAST(br_link);
+  VLOG(3) << __FUNCTION__ << ": pkt " << p << " on link " << OBJ_CAST(br_link);
 
   rtnl_link_bridge_vlan *br_vlan = rtnl_link_bridge_get_port_vlan(br_link);
 
