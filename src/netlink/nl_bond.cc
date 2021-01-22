@@ -237,6 +237,9 @@ int nl_bond::add_lag_member(rtnl_link *bond, rtnl_link *link) {
               << ": bond was already bridge slave: " << OBJ_CAST(br_link);
       nl->link_created(br_link);
 
+      if (nl->get_bridge_stp_state() == 0)
+	      return rv;
+
       auto new_state = rtnl_link_bridge_get_port_state(br_link);
       std::string state;
 
