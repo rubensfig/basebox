@@ -49,6 +49,8 @@ sources = files('''
   src/of-dpa/ofdpa_client.cc
   src/of-dpa/ofdpa_client.h
   src/of-dpa/ofdpa_datatypes.h
+  src/p4/p4-controller.h
+  src/p4/p4-controller.cc
   src/sai.h
   src/utils/rofl-utils.h
   src/utils/utils.h
@@ -160,11 +162,23 @@ src_pb = protoc_gen.process(
   'src/grpc/proto/common/empty.proto',
   'src/grpc/proto/common/openconfig-interfaces.proto',
   'src/grpc/proto/statistics/statistics-service.proto',
+  'src/grpc/proto/p4/config/v1/p4info.proto',
+  'src/grpc/proto/p4/config/v1/p4types.proto',
+  'src/grpc/proto/p4/v1/p4data.proto',
+  'src/grpc/proto/p4/v1/p4runtime.proto',
+  'src/grpc/proto/google/rpc/code.proto',
+  'src/grpc/proto/google/rpc/status.proto',
   preserve_path_from : meson.current_source_dir()+'/src/grpc/proto')
 
 src_grpc = grpc_gen.process(
   'src/grpc/proto/api/ofdpa.proto',
   'src/grpc/proto/statistics/statistics-service.proto',
+  'src/grpc/proto/p4/config/v1/p4info.proto',
+  'src/grpc/proto/p4/config/v1/p4types.proto',
+  'src/grpc/proto/p4/v1/p4data.proto',
+  'src/grpc/proto/p4/v1/p4runtime.proto',
+  'src/grpc/proto/google/rpc/code.proto',
+  'src/grpc/proto/google/rpc/status.proto',
   preserve_path_from : meson.current_source_dir()+'/src/grpc/proto')
 
 version_h = vcs_tag(input: 'src/version.h.in',

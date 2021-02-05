@@ -9,7 +9,7 @@
 #include "netlink/cnetlink.h"
 #include "netlink/nbi_impl.h"
 #include "netlink/tap_manager.h"
-#include "of-dpa/controller.h"
+#include "p4/p4-controller.h"
 #include "version.h"
 
 DECLARE_string(tryfromenv); // from gflags
@@ -25,7 +25,7 @@ static bool validate_port(const char *flagname, gflags::int32 value) {
 
 int main(int argc, char **argv) {
   using basebox::cnetlink;
-  using basebox::controller;
+  using basebox::P4Controller;
   using basebox::nbi_impl;
   using basebox::tap_manager;
 
@@ -48,19 +48,12 @@ int main(int argc, char **argv) {
   gflags::ParseCommandLineFlags(&argc, &argv, true);
   google::InitGoogleLogging(argv[0]);
 
-  rofl::openflow::cofhello_elem_versionbitmap versionbitmap;
-  versionbitmap.add_ofp_version(rofl::openflow13::OFP_VERSION);
-  LOG(INFO) << __FUNCTION__
-            << ": using OpenFlow version-bitmap: " << versionbitmap;
-
   std::shared_ptr<cnetlink> nl(new cnetlink());
   std::shared_ptr<tap_manager> tap_man(new tap_manager(nl));
   std::unique_ptr<nbi_impl> nbi(new nbi_impl(nl, tap_man));
-  std::shared_ptr<controller> box(
-      new controller(std::move(nbi), versionbitmap, FLAGS_ofdpa_grpc_port));
+  std::shared_ptr<P4Controller> box( new P4Controller(std::move(nbi)));
 
-  rofl::csockaddr baddr(AF_INET, std::string("0.0.0.0"), FLAGS_port);
-  box->dpt_sock_listen(baddr);
+  box->setup_connection();
 
   basebox::ApiServer grpcConnector(box, tap_man);
   grpcConnector.runGRPCServer();
