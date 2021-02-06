@@ -15,14 +15,21 @@
 
 #include "p4/v1/p4runtime.grpc.pb.h"
 #include "p4/v1/p4runtime.pb.h"
+#include "gnmi/gnmi.grpc.pb.h"
+#include "gnmi/gnmi.pb.h"
 #include "p4-controller.h"
 
 namespace basebox {
 using namespace grpc;
 
-void P4Controller::setup_connection() {
-  std::shared_ptr<grpc::Channel> chan =
-      grpc::CreateChannel(remote, grpc::InsecureChannelCredentials());
+void P4Controller::handle_wakeup(rofl::cthread &thread) {}
+void P4Controller::handle_read_event(rofl::cthread &thread, int fd) {}
+void P4Controller::handle_write_event(rofl::cthread &thread, int fd) {}
+void P4Controller::handle_timeout(rofl::cthread &thread, uint32_t timer_id) {}
+
+// handle arbitration
+void P4Controller::setup_p4_connection() {
+  chan = grpc::CreateChannel(remote, grpc::InsecureChannelCredentials());
   ::grpc::ClientContext context;
   
   ::p4::v1::StreamMessageRequest req = ::p4::v1::StreamMessageRequest();
@@ -30,20 +37,38 @@ void P4Controller::setup_connection() {
   chan->GetState(true);
 
   auto stub_ = ::p4::v1::P4Runtime::NewStub(chan);
-  std::shared_ptr<grpc_impl::ClientReaderWriter<p4::v1::StreamMessageRequest, p4::v1::StreamMessageResponse> > _stream = stub_->StreamChannel(&context);
+  stream = stub_->StreamChannel(&context);
 
   auto arb = req.mutable_arbitration();
   arb->set_device_id( (::google::protobuf::uint64)device_id);
   arb->mutable_election_id()->set_high(1);
   arb->mutable_election_id()->set_low(0);
 
-  _stream->Write(req);
-  auto ret = _stream->Read(&res);
+  stream->Write(req);
+  auto ret = stream->Read(&res);
 
   if (res.arbitration().status().code() == 0)
 	  VLOG(1) << __FUNCTION__ << " MASTER";
 
-  stream = std::move(_stream);
+}
+
+void P4Controller::setup_gnmi_connection() {
+	::grpc::ClientContext context;
+	::gnmi::GetRequest req;
+	::gnmi::GetResponse res;
+	
+	auto path = req.mutable_path()->Add();
+	// path->add_elem();
+
+	req.set_type(::gnmi::GetRequest_DataType_CONFIG); // ALL - gnmi::GetRequest::DataType::All
+	req.set_encoding(::gnmi::Encoding::PROTO);
+	auto stub = ::gnmi::gNMI::NewStub(chan);
+	auto rpc_res = stub->Get(&context, req, &res);
+	VLOG(1) << __FUNCTION__ << "GET= " << rpc_res.ok();
+	auto val =  res.notification(0).update(0).val().any_val();
+	
+	VLOG(1)	<< __FUNCTION__ << " TYPE VAL=" << val.type_url();
+	VLOG(1)	<< __FUNCTION__ << " VALUE VALUE=" << val.value();
 }
 
 int P4Controller::lag_create(uint32_t *lag_id, std::string name,

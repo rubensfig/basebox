@@ -13,6 +13,7 @@
 #include <mutex>
 #include <set>
 #include <string>
+#include <rofl/common/cthread.hpp>
 
 #include <glog/logging.h>
 #include <grpc++/grpc++.h>
@@ -23,22 +24,35 @@
 
 namespace basebox {
 
-class P4Controller : public basebox::switch_interface {
+class P4Controller : public basebox::switch_interface,
+       		     public rofl::cthread_env {
 
   P4Controller(const P4Controller &) = delete;
   P4Controller &operator=(const P4Controller &) = delete;
   std::unique_ptr<nbi> nb;
 
 public:
-  P4Controller(std::unique_ptr<nbi> nb) : nb(std::move(nb)) {
+  P4Controller(std::unique_ptr<nbi> nb) : nb(std::move(nb)), thread(1) {
     this->nb->register_switch(this);
+
+    try {
+      thread.start("p4-controller");
+      setup_p4_connection();
+      setup_gnmi_connection();
+    } catch (...) {
+      LOG(FATAL) << __FUNCTION__ << ": caught unknown exception";
+    }
   }
 
   ~P4Controller() override {}
 
-  void setup_connection();
-
 public:
+  // cthread_env
+  void handle_wakeup(rofl::cthread &thread) override;
+  void handle_read_event(rofl::cthread &thread, int fd) override;
+  void handle_write_event(rofl::cthread &thread, int fd) override;
+  void handle_timeout(rofl::cthread &thread, uint32_t timer_id) override;
+  
   // switch_interface
   int lag_create(uint32_t *lag_id, std::string name,
                  uint8_t mode) noexcept override;
@@ -221,9 +235,12 @@ private:
   bool connected;
   std::string remote = "localhost:50001";
   uint64_t device_id = 1;
+  rofl::cthread thread;
+  void setup_p4_connection();
+  void setup_gnmi_connection();
 
-  std::shared_ptr<grpc_impl::ClientReaderWriter<p4::v1::StreamMessageRequest, p4::v1::StreamMessageResponse> > stream;
-  
+  std::unique_ptr<grpc_impl::ClientReaderWriter<p4::v1::StreamMessageRequest, p4::v1::StreamMessageResponse> > stream;
+  std::shared_ptr<grpc::Channel> chan;
 }; // class P4Controller
 
 } // end of namespace basebox

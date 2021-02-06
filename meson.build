@@ -168,6 +168,8 @@ src_pb = protoc_gen.process(
   'src/grpc/proto/p4/v1/p4runtime.proto',
   'src/grpc/proto/google/rpc/code.proto',
   'src/grpc/proto/google/rpc/status.proto',
+  'src/grpc/proto/github.com/openconfig/gnmi/proto/gnmi_ext/gnmi_ext.proto',
+  'src/grpc/proto/gnmi/gnmi.proto',
   preserve_path_from : meson.current_source_dir()+'/src/grpc/proto')
 
 src_grpc = grpc_gen.process(
@@ -179,6 +181,7 @@ src_grpc = grpc_gen.process(
   'src/grpc/proto/p4/v1/p4runtime.proto',
   'src/grpc/proto/google/rpc/code.proto',
   'src/grpc/proto/google/rpc/status.proto',
+  'src/grpc/proto/gnmi/gnmi.proto',
   preserve_path_from : meson.current_source_dir()+'/src/grpc/proto')
 
 version_h = vcs_tag(input: 'src/version.h.in',
