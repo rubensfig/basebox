@@ -25,8 +25,8 @@ static bool validate_port(const char *flagname, gflags::int32 value) {
 
 int main(int argc, char **argv) {
   using basebox::cnetlink;
-  using basebox::P4Controller;
   using basebox::nbi_impl;
+  using basebox::P4Controller;
   using basebox::tap_manager;
 
   if (!gflags::RegisterFlagValidator(&FLAGS_port, &validate_port)) {
@@ -51,7 +51,7 @@ int main(int argc, char **argv) {
   std::shared_ptr<cnetlink> nl(new cnetlink());
   std::shared_ptr<tap_manager> tap_man(new tap_manager(nl));
   std::unique_ptr<nbi_impl> nbi(new nbi_impl(nl, tap_man));
-  std::shared_ptr<P4Controller> box( new P4Controller(std::move(nbi)));
+  std::shared_ptr<P4Controller> box(new P4Controller(std::move(nbi)));
 
   basebox::ApiServer grpcConnector(box, tap_man);
   grpcConnector.runGRPCServer();

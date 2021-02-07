@@ -1985,15 +1985,15 @@ int controller::subscribe_to(enum swi_flags flags) noexcept {
      * 09-00-2B-00-00-05 ("all intermediate systems")
      */
     dpt.send_flow_mod_message(
-        rofl::cauxid(0), fm_driver.enable_policy_l2(
-                             dpt.get_version(),
-                             rofl::caddress_ll("01:80:C2:00:00:14"),
-                             rofl::caddress_ll("ff:ff:ff:ff:ff:fe")));
+        rofl::cauxid(0),
+        fm_driver.enable_policy_l2(dpt.get_version(),
+                                   rofl::caddress_ll("01:80:C2:00:00:14"),
+                                   rofl::caddress_ll("ff:ff:ff:ff:ff:fe")));
     dpt.send_flow_mod_message(
-        rofl::cauxid(0), fm_driver.enable_policy_l2(
-                             dpt.get_version(),
-                             rofl::caddress_ll("09:00:2B:00:00:04"),
-                             rofl::caddress_ll("ff:ff:ff:ff:ff:fe")));
+        rofl::cauxid(0),
+        fm_driver.enable_policy_l2(dpt.get_version(),
+                                   rofl::caddress_ll("09:00:2B:00:00:04"),
+                                   rofl::caddress_ll("ff:ff:ff:ff:ff:fe")));
 
     // Adding policy entry so that the multicast packets reach the switch
     // The ff02:: address is a permanent multicast address with a link scope

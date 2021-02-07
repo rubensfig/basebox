@@ -29,7 +29,7 @@ ctapdev::~ctapdev() { tap_close(); }
 
 void ctapdev::tap_open() {
   struct ifreq ifr;
-  int rc, carrier = 0;
+  int rc, carrier = true;
 
   if (fd != -1) {
     VLOG(1) << __FUNCTION__ << ": tapdev is already open using fd=" << fd;

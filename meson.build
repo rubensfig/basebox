@@ -170,6 +170,11 @@ src_pb = protoc_gen.process(
   'src/grpc/proto/google/rpc/status.proto',
   'src/grpc/proto/github.com/openconfig/gnmi/proto/gnmi_ext/gnmi_ext.proto',
   'src/grpc/proto/gnmi/gnmi.proto',
+  'src/grpc/proto/ywrapper/ywrapper.proto',
+  'src/grpc/proto/yext/yext.proto',
+  'src/grpc/proto/openconfig/enums/enums.proto',
+  'src/grpc/proto/openconfig/openconfig_interfaces/openconfig_interfaces.proto',
+  'src/grpc/proto/openconfig/openconfig.proto',
   preserve_path_from : meson.current_source_dir()+'/src/grpc/proto')
 
 src_grpc = grpc_gen.process(

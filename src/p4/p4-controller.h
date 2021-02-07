@@ -25,7 +25,7 @@
 namespace basebox {
 
 class P4Controller : public basebox::switch_interface,
-       		     public rofl::cthread_env {
+                     public rofl::cthread_env {
 
   P4Controller(const P4Controller &) = delete;
   P4Controller &operator=(const P4Controller &) = delete;
@@ -34,6 +34,9 @@ class P4Controller : public basebox::switch_interface,
 public:
   P4Controller(std::unique_ptr<nbi> nb) : nb(std::move(nb)), thread(1) {
     this->nb->register_switch(this);
+    chan = grpc::CreateChannel(remote, grpc::InsecureChannelCredentials());
+    stub = ::p4::v1::P4Runtime::NewStub(chan);
+    stream = stub->StreamChannel(&context);
 
     try {
       thread.start("p4-controller");
@@ -52,7 +55,7 @@ public:
   void handle_read_event(rofl::cthread &thread, int fd) override;
   void handle_write_event(rofl::cthread &thread, int fd) override;
   void handle_timeout(rofl::cthread &thread, uint32_t timer_id) override;
-  
+
   // switch_interface
   int lag_create(uint32_t *lag_id, std::string name,
                  uint8_t mode) noexcept override;
@@ -239,8 +242,12 @@ private:
   void setup_p4_connection();
   void setup_gnmi_connection();
 
-  std::unique_ptr<grpc_impl::ClientReaderWriter<p4::v1::StreamMessageRequest, p4::v1::StreamMessageResponse> > stream;
+  ::grpc::ClientContext context;
+  std::unique_ptr<grpc_impl::ClientReaderWriter<p4::v1::StreamMessageRequest,
+                                                p4::v1::StreamMessageResponse>>
+      stream;
   std::shared_ptr<grpc::Channel> chan;
+  std::unique_ptr<::p4::v1::P4Runtime::Stub> stub;
 }; // class P4Controller
 
 } // end of namespace basebox
