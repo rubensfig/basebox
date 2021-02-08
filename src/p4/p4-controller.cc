@@ -8,8 +8,12 @@
 #include <cstdio>
 #include <cstring>
 #include <thread>
+#include <arpa/inet.h>
 #include <google/protobuf/any.h>
 #include <google/protobuf/any.pb.h>
+#include <google/protobuf/text_format.h>
+#include <google/protobuf/io/zero_copy_stream.h>
+#include <google/protobuf/io/zero_copy_stream_impl.h>
 
 #include <linux/if_ether.h>
 #include <grpc++/grpc++.h>
@@ -38,15 +42,67 @@ void P4Controller::setup_p4_connection() {
 
   auto arb = req.mutable_arbitration();
   arb->set_device_id((::google::protobuf::uint64)device_id);
-  arb->mutable_role()->set_id(0);
-  arb->mutable_election_id()->set_high(1);
-  arb->mutable_election_id()->set_low(0);
+  arb->mutable_role()->set_id(1);
+  arb->mutable_election_id()->set_high(0);
+  arb->mutable_election_id()->set_low(1);
 
   stream->Write(req);
   auto arb_res = stream->Read(&res);
 
   if (res.arbitration().status().code() == 0)
     VLOG(1) << __FUNCTION__ << " MASTER";
+}
+
+// setup pipeline config
+void P4Controller::setup_p4_pipeline_config() {
+  // uint64 device_id = 1;
+  // uint64 role_id = 2;
+  // Uint128 election_id = 3;
+  // Action action = 4;
+  // ForwardingPipelineConfig config = 5;
+  ::grpc::ClientContext context;
+  ::p4::v1::SetForwardingPipelineConfigRequest config_request =
+      ::p4::v1::SetForwardingPipelineConfigRequest();
+  ::p4::v1::SetForwardingPipelineConfigResponse config_response =
+      ::p4::v1::SetForwardingPipelineConfigResponse();
+  auto program_stream = ::google::protobuf::io::FileInputStream(p4_program_fd);
+  auto device_stream = ::google::protobuf::io::FileInputStream(p4_device_fd);
+
+  config_request.set_device_id((::google::protobuf::uint64)device_id);
+  config_request.set_role_id((::google::protobuf::uint64)1);
+  config_request.mutable_election_id()->set_high(0);
+  config_request.mutable_election_id()->set_low(1);
+  config_request.set_action(
+      ::p4::v1::SetForwardingPipelineConfigRequest_Action_VERIFY_AND_COMMIT);
+  auto pipeline_config = config_request.mutable_config();
+  auto p4info = pipeline_config->mutable_p4info();
+
+  // p4info->ParseFromString(p4_program);
+  ::google::protobuf::TextFormat::Merge(&program_stream, p4info);
+  // pipeline_config->set_p4_device_config(open_file(&device_stream));
+
+  ::grpc::Status st = stub->SetForwardingPipelineConfig(
+      &context, config_request, &config_response);
+  VLOG(1) << st.error_message();
+}
+
+void P4Controller::get_p4_info() {
+  ::grpc::ClientContext context;
+  ::p4::v1::GetForwardingPipelineConfigRequest config_request =
+      ::p4::v1::GetForwardingPipelineConfigRequest();
+  ::p4::v1::GetForwardingPipelineConfigResponse config_response =
+      ::p4::v1::GetForwardingPipelineConfigResponse();
+
+  config_request.set_device_id((::google::protobuf::uint64)device_id);
+  config_request.set_response_type(
+      ::p4::v1::
+          GetForwardingPipelineConfigRequest_ResponseType_P4INFO_AND_COOKIE);
+
+  ::grpc::Status st = stub->GetForwardingPipelineConfig(
+      &context, config_request, &config_response);
+  VLOG(1) << st.error_code() << " " << st.error_message();
+
+  VLOG(1) << __FUNCTION__ << config_response.config().p4info().DebugString();
 }
 
 void P4Controller::setup_gnmi_connection() {
@@ -75,7 +131,7 @@ void P4Controller::setup_gnmi_connection() {
     for (auto up_it : not_it.update()) {
       for (auto elem_it : up_it.path().elem()) {
         if (elem_it.name() == "interface") {
-          VLOG(1) << elem_it.key().at("name");
+          // VLOG(1) << elem_it.key().at("name");
           auto name = elem_it.key().at("name");
           auto pm_it = port_map.find(name);
           if (pm_it == port_map.end())
@@ -228,12 +284,36 @@ int P4Controller::l3_unicast_host_add(const rofl::caddress_in4 &ipv4_dst,
 
   req.set_device_id((::google::protobuf::uint64)device_id);
   req.set_role_id(0);
-  req.mutable_election_id()->set_high(1);
-  req.mutable_election_id()->set_low(0);
-  req.set_atomicity(::p4::v1::WriteRequest_Atomicity_DATAPLANE_ATOMIC);
+  req.mutable_election_id()->set_high(0);
+  req.mutable_election_id()->set_low(1);
+  req.set_atomicity(::p4::v1::WriteRequest_Atomicity_CONTINUE_ON_ERROR);
   auto update = req.add_updates();
   update->set_type(::p4::v1::Update_Type_INSERT);
+  auto entity = update->mutable_entity();
+  auto table_entry = entity->mutable_table_entry();
 
+  table_entry->set_table_id(33574068); // MyIngress.ipv4_lpm
+  auto field_match = table_entry->add_match();
+  field_match->set_field_id(1);
+  char ip[INET_ADDRSTRLEN] = {0};
+  auto _ip = ipv4_dst.str().c_str();
+  inet_ntop(AF_INET, _ip, ip, INET_ADDRSTRLEN);
+  VLOG(1) << "IP " << ip;
+  field_match->mutable_lpm()->set_value(ip);
+  field_match->mutable_lpm()->set_prefix_len(24);
+
+  auto action = table_entry->mutable_action()->mutable_action();
+  action->set_action_id(16799317); // ipv4_forwarding
+
+  auto param1 = action->add_params();
+  param1->set_param_id(1); // name: "dstAddr"
+  param1->set_value("00:00:00:00:01:01");
+
+  auto param2 = action->add_params();
+  param2->set_param_id(2); // name: "port"
+  param2->set_value("1");
+
+  VLOG(1) << __FUNCTION__ << req.DebugString();
   stub->Write(&context, req, &res);
 
   VLOG(1) << " Configuring IP host";
@@ -268,14 +348,40 @@ int P4Controller::l3_unicast_route_add(const rofl::caddress_in4 &ipv4_dst,
 
   req.set_device_id((::google::protobuf::uint64)device_id);
   req.set_role_id(0);
-  req.mutable_election_id()->set_high(1);
-  req.mutable_election_id()->set_low(0);
-  req.set_atomicity(::p4::v1::WriteRequest_Atomicity_DATAPLANE_ATOMIC);
+  req.mutable_election_id()->set_high(0);
+  req.mutable_election_id()->set_low(1);
+  req.set_atomicity(::p4::v1::WriteRequest_Atomicity_CONTINUE_ON_ERROR);
   auto update = req.add_updates();
   update->set_type(::p4::v1::Update_Type_INSERT);
+  auto entity = update->mutable_entity();
+  auto table_entry = entity->mutable_table_entry();
 
+  table_entry->set_table_id(33574068); // MyIngress.ipv4_lpm
+  auto field_match = table_entry->add_match();
+  field_match->set_field_id(1);
+
+  char ip[INET_ADDRSTRLEN] = {0};
+  auto _ip = ipv4_dst.str().c_str();
+  inet_ntop(AF_INET, _ip, ip, INET_ADDRSTRLEN);
+  VLOG(1) << "IP " << ip;
+
+  field_match->mutable_lpm()->set_value(ip);
+  field_match->mutable_lpm()->set_prefix_len(24);
+
+  auto action = table_entry->mutable_action()->mutable_action();
+  action->set_action_id(16799317); // ipv4_forwarding
+
+  auto param1 = action->add_params();
+  param1->set_param_id(1); // name: "dstAddr"
+  param1->set_value("00:00:00:00:01:01");
+
+  auto param2 = action->add_params();
+  param2->set_param_id(2); // name: "port"
+  param2->set_value("1");
+
+  VLOG(1) << __FUNCTION__ << req.DebugString();
   stub->Write(&context, req, &res);
-  VLOG(1) << " Configuring IP route";
+
   return 0;
 }
 

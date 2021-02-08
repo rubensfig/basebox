@@ -15,6 +15,8 @@
 DECLARE_string(tryfromenv); // from gflags
 DEFINE_int32(port, 6653, "Listening port");
 DEFINE_int32(ofdpa_grpc_port, 50051, "Listening port of ofdpa gRPC server");
+DEFINE_string(p4_program_dir, "/home/rubens/basebox/p4dir/p4info.txt",
+              "P4 Pipeline Config");
 
 static bool validate_port(const char *flagname, gflags::int32 value) {
   VLOG(3) << __FUNCTION__ << ": flagname=" << flagname << ", value=" << value;

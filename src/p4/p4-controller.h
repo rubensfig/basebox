@@ -9,11 +9,13 @@
 
 #include <exception>
 #include <iostream>
+#include <fstream>
 #include <memory>
 #include <mutex>
 #include <set>
 #include <string>
 #include <rofl/common/cthread.hpp>
+#include <google/protobuf/io/zero_copy_stream_impl.h>
 
 #include <glog/logging.h>
 #include <grpc++/grpc++.h>
@@ -34,20 +36,29 @@ class P4Controller : public basebox::switch_interface,
 public:
   P4Controller(std::unique_ptr<nbi> nb) : nb(std::move(nb)), thread(1) {
     this->nb->register_switch(this);
+    ::grpc::ClientContext context;
+
     chan = grpc::CreateChannel(remote, grpc::InsecureChannelCredentials());
     stub = ::p4::v1::P4Runtime::NewStub(chan);
-    stream = stub->StreamChannel(&context);
+    stream = stub->StreamChannel(&global_context);
+    p4_program_fd = open(p4_program_dir.c_str(), O_RDONLY);
+    p4_device_fd = open(p4_device_dir.c_str(), O_RDONLY);
 
     try {
       thread.start("p4-controller");
       setup_p4_connection();
+      setup_p4_pipeline_config();
+      get_p4_info();
       setup_gnmi_connection();
     } catch (...) {
       LOG(FATAL) << __FUNCTION__ << ": caught unknown exception";
     }
   }
 
-  ~P4Controller() override {}
+  ~P4Controller() override {
+    close(p4_program_fd);
+    close(p4_device_fd);
+  }
 
 public:
   // cthread_env
@@ -237,12 +248,30 @@ public:
 private:
   bool connected;
   std::string remote = "localhost:50001";
+  std::string p4_program_dir = "/home/rubens/code/basebox/p4dir/p4info.txt";
+  std::string p4_device_dir = "/home/rubens/code/basebox/p4dir/bmv2.json";
+  int p4_program_fd;
+  int p4_device_fd;
   uint64_t device_id = 1;
   rofl::cthread thread;
-  void setup_p4_connection();
-  void setup_gnmi_connection();
 
-  ::grpc::ClientContext context;
+  void setup_p4_connection();
+  void setup_p4_pipeline_config();
+  void setup_gnmi_connection();
+  void get_p4_info();
+
+  std::string open_file(::google::protobuf::io::FileInputStream *input) {
+    const void *buffer;
+    int size;
+    std::string re;
+
+    while (input->Next(&buffer, &size))
+      re += (char *)buffer;
+
+    return re;
+  }
+
+  ::grpc::ClientContext global_context;
   std::unique_ptr<grpc_impl::ClientReaderWriter<p4::v1::StreamMessageRequest,
                                                 p4::v1::StreamMessageResponse>>
       stream;
