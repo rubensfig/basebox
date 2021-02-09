@@ -8,7 +8,6 @@
 #include <cstdio>
 #include <cstring>
 #include <thread>
-#include <arpa/inet.h>
 #include <google/protobuf/any.h>
 #include <google/protobuf/any.pb.h>
 #include <google/protobuf/text_format.h>
@@ -295,10 +294,7 @@ int P4Controller::l3_unicast_host_add(const rofl::caddress_in4 &ipv4_dst,
   table_entry->set_table_id(33574068); // MyIngress.ipv4_lpm
   auto field_match = table_entry->add_match();
   field_match->set_field_id(1);
-  char ip[INET_ADDRSTRLEN] = {0};
-  auto _ip = ipv4_dst.str().c_str();
-  inet_ntop(AF_INET, _ip, ip, INET_ADDRSTRLEN);
-  VLOG(1) << "IP " << ip;
+  std::string ip = packed_ip_address(ipv4_dst.str());
   field_match->mutable_lpm()->set_value(ip);
   field_match->mutable_lpm()->set_prefix_len(24);
 
@@ -360,10 +356,7 @@ int P4Controller::l3_unicast_route_add(const rofl::caddress_in4 &ipv4_dst,
   auto field_match = table_entry->add_match();
   field_match->set_field_id(1);
 
-  char ip[INET_ADDRSTRLEN] = {0};
-  auto _ip = ipv4_dst.str().c_str();
-  inet_ntop(AF_INET, _ip, ip, INET_ADDRSTRLEN);
-  VLOG(1) << "IP " << ip;
+  std::string ip = packed_ip_address(ipv4_dst.str());
 
   field_match->mutable_lpm()->set_value(ip);
   field_match->mutable_lpm()->set_prefix_len(24);

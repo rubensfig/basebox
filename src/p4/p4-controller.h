@@ -16,6 +16,7 @@
 #include <string>
 #include <rofl/common/cthread.hpp>
 #include <google/protobuf/io/zero_copy_stream_impl.h>
+#include <arpa/inet.h>
 
 #include <glog/logging.h>
 #include <grpc++/grpc++.h>
@@ -259,6 +260,16 @@ private:
   void setup_p4_pipeline_config();
   void setup_gnmi_connection();
   void get_p4_info();
+
+  std::string packed_ip_address(std::string ip) {
+	  std::string st;
+	struct in_addr ipvalue;
+	inet_pton(AF_INET, ip.c_str(), &ipvalue);
+
+	std::stringstream s;
+	s << std::hex << ntohl(ipvalue.s_addr);
+    return s.str();
+  }
 
   std::string open_file(::google::protobuf::io::FileInputStream *input) {
     const void *buffer;
