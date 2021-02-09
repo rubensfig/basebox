@@ -54,6 +54,7 @@ int main(int argc, char **argv) {
   std::shared_ptr<tap_manager> tap_man(new tap_manager(nl));
   std::unique_ptr<nbi_impl> nbi(new nbi_impl(nl, tap_man));
   std::shared_ptr<P4Controller> box(new P4Controller(std::move(nbi)));
+  box->start();
 
   basebox::ApiServer grpcConnector(box, tap_man);
   grpcConnector.runGRPCServer();

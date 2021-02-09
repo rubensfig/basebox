@@ -3,6 +3,17 @@ pkg_info {
 }
 tables {
   preamble {
+    id: 33598040
+    name: "MyIngress.send_arp_to_cpu"
+    alias: "send_arp_to_cpu"
+  }
+  action_refs {
+    id: 16829203
+  }
+  size: 1024
+}
+tables {
+  preamble {
     id: 33574068
     name: "MyIngress.ipv4_lpm"
     alias: "ipv4_lpm"
@@ -15,6 +26,9 @@ tables {
   }
   action_refs {
     id: 16799317
+  }
+  action_refs {
+    id: 16829203
   }
   action_refs {
     id: 16805608
@@ -53,6 +67,26 @@ actions {
     id: 2
     name: "port"
     bitwidth: 9
+  }
+}
+actions {
+  preamble {
+    id: 16829203
+    name: "MyIngress.do_send_to_cpu"
+    alias: "do_send_to_cpu"
+  }
+}
+controller_packet_metadata {
+  preamble {
+    id: 67146229
+    name: "packet_in"
+    alias: "packet_in"
+    annotations: "@controller_header(\"packet_in\")"
+  }
+  metadata {
+    id: 1
+    name: "ingress_port"
+    bitwidth: 16
   }
 }
 type_info {
