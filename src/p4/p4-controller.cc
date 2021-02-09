@@ -28,7 +28,20 @@
 namespace basebox {
 using namespace grpc;
 
-void P4Controller::handle_wakeup(rofl::cthread &thread) {}
+void P4Controller::start() noexcept {
+  thread.wakeup(this);
+}
+
+void P4Controller::handle_wakeup(rofl::cthread &thread) {
+  ::p4::v1::StreamMessageResponse res = ::p4::v1::StreamMessageResponse();
+  stream->Read(&res);
+
+  if (res.has_packet()) {
+    VLOG(1) << " HAS PACKET " << res.packet().DebugString();
+    this->thread.wakeup(this);
+  }
+}
+
 void P4Controller::handle_read_event(rofl::cthread &thread, int fd) {}
 void P4Controller::handle_write_event(rofl::cthread &thread, int fd) {}
 void P4Controller::handle_timeout(rofl::cthread &thread, uint32_t timer_id) {}

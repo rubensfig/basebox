@@ -62,6 +62,8 @@ public:
     close(p4_device_fd);
   }
 
+  void start() noexcept;
+
 public:
   // cthread_env
   void handle_wakeup(rofl::cthread &thread) override;
@@ -256,6 +258,7 @@ private:
   int p4_device_fd;
   uint64_t device_id = 1;
   rofl::cthread thread;
+
 
   void setup_p4_connection();
   void setup_p4_pipeline_config();
