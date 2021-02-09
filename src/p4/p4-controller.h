@@ -17,6 +17,7 @@
 #include <rofl/common/cthread.hpp>
 #include <google/protobuf/io/zero_copy_stream_impl.h>
 #include <arpa/inet.h>
+#include <bitset>
 
 #include <glog/logging.h>
 #include <grpc++/grpc++.h>
@@ -261,14 +262,33 @@ private:
   void setup_gnmi_connection();
   void get_p4_info();
 
-  std::string packed_ip_address(std::string ip) {
-	  std::string st;
-	struct in_addr ipvalue;
-	inet_pton(AF_INET, ip.c_str(), &ipvalue);
+  std::string packed_mac_address(std::string mac) {
+    std::stringstream ret;
+    auto mac_c = strdup(mac.c_str());
+    auto buff = strtok(mac_c,":");
+    while (buff != NULL) {
+       ret << std::hex << (unsigned char)atoi(buff);
+       buff = strtok(NULL,":");
+    }
 
-	std::stringstream s;
-	s << std::hex << ntohl(ipvalue.s_addr);
-    return s.str();
+    VLOG(1) << ret.str();
+    free(mac_c);
+    return ret.str();
+  }
+
+  std::string packed_ip_address(std::string ip, int prefixlen) {
+    std::stringstream ret;
+    auto ip_c = strdup(ip.c_str());
+
+    auto buff = strtok(ip_c,".");
+    while (buff != NULL) {
+       ret << std::hex << (unsigned char)atoi(buff);
+       buff = strtok(NULL,".");
+    }
+
+    VLOG(1) << ret.str();
+    free(ip_c);
+    return ret.str();
   }
 
   std::string open_file(::google::protobuf::io::FileInputStream *input) {

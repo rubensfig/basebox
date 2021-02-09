@@ -277,6 +277,7 @@ int P4Controller::l3_unicast_host_add(const rofl::caddress_in4 &ipv4_dst,
                                       uint32_t l3_interface_id, bool is_ecmp,
                                       bool update_route,
                                       uint16_t vrf_id) noexcept {
+#if 0
   ::grpc::ClientContext context;
   ::p4::v1::WriteRequest req = ::p4::v1::WriteRequest();
   ::p4::v1::WriteResponse res = ::p4::v1::WriteResponse();
@@ -294,7 +295,8 @@ int P4Controller::l3_unicast_host_add(const rofl::caddress_in4 &ipv4_dst,
   table_entry->set_table_id(33574068); // MyIngress.ipv4_lpm
   auto field_match = table_entry->add_match();
   field_match->set_field_id(1);
-  std::string ip = packed_ip_address(ipv4_dst.str());
+  std::string ip = packed_ip_address(ipv4_dst.str(), 24);
+
   field_match->mutable_lpm()->set_value(ip);
   field_match->mutable_lpm()->set_prefix_len(24);
 
@@ -313,6 +315,7 @@ int P4Controller::l3_unicast_host_add(const rofl::caddress_in4 &ipv4_dst,
   stub->Write(&context, req, &res);
 
   VLOG(1) << " Configuring IP host";
+#endif
   return 0;
 }
 
@@ -356,8 +359,7 @@ int P4Controller::l3_unicast_route_add(const rofl::caddress_in4 &ipv4_dst,
   auto field_match = table_entry->add_match();
   field_match->set_field_id(1);
 
-  std::string ip = packed_ip_address(ipv4_dst.str());
-
+  std::string ip = packed_ip_address(ipv4_dst.str(), 24);
   field_match->mutable_lpm()->set_value(ip);
   field_match->mutable_lpm()->set_prefix_len(24);
 
@@ -366,7 +368,8 @@ int P4Controller::l3_unicast_route_add(const rofl::caddress_in4 &ipv4_dst,
 
   auto param1 = action->add_params();
   param1->set_param_id(1); // name: "dstAddr"
-  param1->set_value("00:00:00:00:01:01");
+  std::string mac = packed_mac_address("00:00:00:00:01:01");
+  param1->set_value(mac);
 
   auto param2 = action->add_params();
   param2->set_param_id(2); // name: "port"
@@ -374,6 +377,8 @@ int P4Controller::l3_unicast_route_add(const rofl::caddress_in4 &ipv4_dst,
 
   VLOG(1) << __FUNCTION__ << req.DebugString();
   stub->Write(&context, req, &res);
+
+  VLOG(1) << __FUNCTION__ << res.DebugString();
 
   return 0;
 }
