@@ -28,6 +28,28 @@
 
 namespace basebox {
 
+struct __attribute__((packed)) packetin_header_t {
+  uint16_t port;
+};
+
+struct __attribute__((packed)) eth_header_t {
+  unsigned char dst_addr[6];
+  unsigned char src_addr[6];
+  uint16_t ethertype;
+};
+
+struct __attribute__((packed)) arp_header_t {
+  uint16_t hw_type;
+  uint16_t proto_type;
+  uint8_t hw_addr_len;
+  uint8_t proto_addr_len;
+  uint16_t opcode;
+  unsigned char hw_src_addr[6];
+  uint32_t proto_src_addr;
+  unsigned char hw_dst_addr[6];
+  uint32_t proto_dst_addr;
+};
+
 class P4Controller : public basebox::switch_interface,
                      public rofl::cthread_env {
 
@@ -259,7 +281,6 @@ private:
   uint64_t device_id = 1;
   rofl::cthread thread;
 
-
   void setup_p4_connection();
   void setup_p4_pipeline_config();
   void setup_gnmi_connection();
@@ -268,10 +289,10 @@ private:
   std::string packed_mac_address(std::string mac) {
     std::stringstream ret;
     auto mac_c = strdup(mac.c_str());
-    auto buff = strtok(mac_c,":");
+    auto buff = strtok(mac_c, ":");
     while (buff != NULL) {
-       ret << std::hex << (unsigned char)atoi(buff);
-       buff = strtok(NULL,":");
+      ret << std::hex << (unsigned char)atoi(buff);
+      buff = strtok(NULL, ":");
     }
 
     VLOG(1) << ret.str();
@@ -283,26 +304,24 @@ private:
     std::stringstream ret;
     auto ip_c = strdup(ip.c_str());
 
-    auto buff = strtok(ip_c,".");
+    auto buff = strtok(ip_c, ".");
     while (buff != NULL) {
-       ret << std::hex << (unsigned char)atoi(buff);
-       buff = strtok(NULL,".");
+      ret << std::hex << (unsigned char)atoi(buff);
+      buff = strtok(NULL, ".");
     }
 
     VLOG(1) << ret.str();
     free(ip_c);
     return ret.str();
   }
+  void packet_handler(std::vector<char> packet, int port_id);
 
-  std::string open_file(::google::protobuf::io::FileInputStream *input) {
-    const void *buffer;
-    int size;
-    std::string re;
+  std::string open_file(std::string file) {
+    std::ifstream ifs(file, std::ios::binary);
+    std::string config((std::istreambuf_iterator<char>(ifs)),
+                       std::istreambuf_iterator<char>());
 
-    while (input->Next(&buffer, &size))
-      re += (char *)buffer;
-
-    return re;
+    return config;
   }
 
   ::grpc::ClientContext global_context;

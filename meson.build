@@ -140,6 +140,8 @@ if not grpcpp.found()
   grpcpp = cppc.find_library('grpc++')
 endif
 
+cjson = dependency('cjson', required: false)
+
 grpc_reflection = cppc.find_library('grpc++_reflection', required: false)
 
 # set up generators
@@ -237,6 +239,7 @@ executable('baseboxd',
   sources, src_pb, src_grpc, version_h,
   include_directories: inc,
   dependencies: [
+    cjson,
     glog,
     grpc,
     grpc_reflection,

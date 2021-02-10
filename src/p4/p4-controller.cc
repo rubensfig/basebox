@@ -13,6 +13,7 @@
 #include <google/protobuf/text_format.h>
 #include <google/protobuf/io/zero_copy_stream.h>
 #include <google/protobuf/io/zero_copy_stream_impl.h>
+#include <google/protobuf/util/json_util.h>
 
 #include <linux/if_ether.h>
 #include <grpc++/grpc++.h>
@@ -23,13 +24,27 @@
 #include "gnmi/gnmi.grpc.pb.h"
 #include "gnmi/gnmi.pb.h"
 #include "openconfig/openconfig.pb.h"
+#include "utils/utils.h"
 #include "p4-controller.h"
 
 namespace basebox {
 using namespace grpc;
+struct packet;
 
-void P4Controller::start() noexcept {
-  thread.wakeup(this);
+void P4Controller::start() noexcept { thread.wakeup(this); }
+
+void P4Controller::packet_handler(std::vector<char> packet, int port_id) {
+  char *pkt_data = packet.data();
+  size_t offset = 0;
+  size_t pkt_size = sizeof(eth_header_t) + sizeof(arp_header_t);
+
+  struct packet *pkt = nullptr;
+
+  pkt = (struct packet *)std::malloc(sizeof(std::size_t) + pkt_size);
+  pkt->len = packet.size();
+  std::memcpy(pkt->data, pkt_data + offset, pkt_size);
+
+  nb->enqueue(port_id, pkt);
 }
 
 void P4Controller::handle_wakeup(rofl::cthread &thread) {
@@ -37,7 +52,10 @@ void P4Controller::handle_wakeup(rofl::cthread &thread) {
   stream->Read(&res);
 
   if (res.has_packet()) {
-    VLOG(1) << " HAS PACKET " << res.packet().DebugString();
+    VLOG(1) << res.packet().DebugString();
+    std::vector<char> packet = std::vector<char>(res.packet().payload().begin(),
+                                                 res.packet().payload().end());
+    packet_handler(packet, 1);
     this->thread.wakeup(this);
   }
 }
@@ -55,7 +73,7 @@ void P4Controller::setup_p4_connection() {
   auto arb = req.mutable_arbitration();
   arb->set_device_id((::google::protobuf::uint64)device_id);
   arb->mutable_role()->set_id(1);
-  arb->mutable_election_id()->set_high(0);
+  arb->mutable_election_id()->set_high(1);
   arb->mutable_election_id()->set_low(1);
 
   stream->Write(req);
@@ -78,20 +96,22 @@ void P4Controller::setup_p4_pipeline_config() {
   ::p4::v1::SetForwardingPipelineConfigResponse config_response =
       ::p4::v1::SetForwardingPipelineConfigResponse();
   auto program_stream = ::google::protobuf::io::FileInputStream(p4_program_fd);
-  auto device_stream = ::google::protobuf::io::FileInputStream(p4_device_fd);
+  auto device_stream = open_file(p4_device_dir);
 
   config_request.set_device_id((::google::protobuf::uint64)device_id);
   config_request.set_role_id((::google::protobuf::uint64)1);
-  config_request.mutable_election_id()->set_high(0);
+  config_request.mutable_election_id()->set_high(1);
   config_request.mutable_election_id()->set_low(1);
   config_request.set_action(
       ::p4::v1::SetForwardingPipelineConfigRequest_Action_VERIFY_AND_COMMIT);
   auto pipeline_config = config_request.mutable_config();
   auto p4info = pipeline_config->mutable_p4info();
+  auto p4devicestream = pipeline_config->p4_device_config();
 
-  // p4info->ParseFromString(p4_program);
   ::google::protobuf::TextFormat::Merge(&program_stream, p4info);
-  // pipeline_config->set_p4_device_config(open_file(&device_stream));
+  pipeline_config->set_p4_device_config(device_stream);
+
+  VLOG(1) << pipeline_config->DebugString();
 
   ::grpc::Status st = stub->SetForwardingPipelineConfig(
       &context, config_request, &config_response);
@@ -485,7 +505,32 @@ int P4Controller::set_egress_tpid(uint32_t port) noexcept { return 0; }
 int P4Controller::delete_egress_tpid(uint32_t port) noexcept { return 0; }
 
 int P4Controller::enqueue(uint32_t port_id, basebox::packet *pkt) noexcept {
-  return 0;
+	VLOG(1) << "PACKET OUT";
+
+	if (port_id != 1)
+		return 0;
+  ::p4::v1::StreamMessageRequest req = ::p4::v1::StreamMessageRequest();
+
+  char *packet = (char*)std::malloc(pkt->len);
+  std::memcpy(packet, pkt->data, pkt->len);
+
+  std::string _pkt(packet, pkt->len);
+  VLOG(1) << _pkt;
+  auto packet_out = req.mutable_packet();
+  auto metadata = packet_out->add_metadata();
+  packet_out->set_payload(_pkt);
+
+  metadata->set_metadata_id(1);
+  std::stringstream value;
+  value << std::hex << (unsigned char)1;
+  metadata->set_value(value.str());
+
+  VLOG(1) << req.DebugString();
+
+  stream->Write(req);
+  free(packet);
+
+   return 0;
 }
 
 int P4Controller::subscribe_to(enum swi_flags flags) noexcept { return 0; }
