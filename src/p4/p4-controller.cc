@@ -515,14 +515,13 @@ int P4Controller::enqueue(uint32_t port_id, basebox::packet *pkt) noexcept {
   std::memcpy(packet, pkt->data, pkt->len);
 
   std::string _pkt(packet, pkt->len);
-  VLOG(1) << _pkt;
   auto packet_out = req.mutable_packet();
   auto metadata = packet_out->add_metadata();
   packet_out->set_payload(_pkt);
 
   metadata->set_metadata_id(1);
   std::stringstream value;
-  value << std::hex << (unsigned char)1;
+  value << std::hex << (unsigned char)0 << std::hex << (unsigned char)1;
   metadata->set_value(value.str());
 
   VLOG(1) << req.DebugString();

@@ -698,7 +698,7 @@
           ],
           "source_info" : {
             "filename" : "p4src/basic.p4",
-            "line" : 184,
+            "line" : 176,
             "column" : 12,
             "source_fragment" : "standard_metadata.egress_spec = (bit<9>)hdr.packet_out.egress_port"
           }
@@ -713,8 +713,8 @@
           ],
           "source_info" : {
             "filename" : "p4src/basic.p4",
-            "line" : 185,
-            "column" : 12,
+            "line" : 177,
+            "column" : 5,
             "source_fragment" : "hdr.packet_out.setInvalid()"
           }
         }
@@ -734,8 +734,37 @@
       "init_table" : "node_2",
       "tables" : [
         {
-          "name" : "MyIngress.ipv4_lpm",
+          "name" : "tbl_act",
           "id" : 0,
+          "source_info" : {
+            "filename" : "p4src/basic.p4",
+            "line" : 176,
+            "column" : 42,
+            "source_fragment" : "= (bit<9>)hdr.packet_out.egress_port; ..."
+          },
+          "key" : [],
+          "match_type" : "exact",
+          "type" : "simple",
+          "max_size" : 1024,
+          "with_counters" : false,
+          "support_timeout" : false,
+          "direct_meters" : null,
+          "action_ids" : [5],
+          "actions" : ["act"],
+          "base_default_next" : "node_4",
+          "next_tables" : {
+            "act" : "node_4"
+          },
+          "default_entry" : {
+            "action_id" : 5,
+            "action_const" : true,
+            "action_data" : [],
+            "action_entry_const" : true
+          }
+        },
+        {
+          "name" : "MyIngress.ipv4_lpm",
+          "id" : 1,
           "source_info" : {
             "filename" : "p4src/basic.p4",
             "line" : 160,
@@ -758,12 +787,12 @@
           "direct_meters" : null,
           "action_ids" : [2, 4, 1, 0],
           "actions" : ["MyIngress.ipv4_forward", "MyIngress.do_send_to_cpu", "MyIngress.drop", "NoAction"],
-          "base_default_next" : "node_4",
+          "base_default_next" : "node_6",
           "next_tables" : {
-            "MyIngress.ipv4_forward" : "node_4",
-            "MyIngress.do_send_to_cpu" : "node_4",
-            "MyIngress.drop" : "node_4",
-            "NoAction" : "node_4"
+            "MyIngress.ipv4_forward" : "node_6",
+            "MyIngress.do_send_to_cpu" : "node_6",
+            "MyIngress.drop" : "node_6",
+            "NoAction" : "node_6"
           },
           "default_entry" : {
             "action_id" : 4,
@@ -774,7 +803,7 @@
         },
         {
           "name" : "MyIngress.send_arp_to_cpu",
-          "id" : 1,
+          "id" : 2,
           "source_info" : {
             "filename" : "p4src/basic.p4",
             "line" : 152,
@@ -790,44 +819,15 @@
           "direct_meters" : null,
           "action_ids" : [3],
           "actions" : ["MyIngress.do_send_to_cpu"],
-          "base_default_next" : "node_6",
+          "base_default_next" : null,
           "next_tables" : {
-            "MyIngress.do_send_to_cpu" : "node_6"
+            "MyIngress.do_send_to_cpu" : null
           },
           "default_entry" : {
             "action_id" : 3,
             "action_const" : false,
             "action_data" : [],
             "action_entry_const" : false
-          }
-        },
-        {
-          "name" : "tbl_act",
-          "id" : 2,
-          "source_info" : {
-            "filename" : "p4src/basic.p4",
-            "line" : 184,
-            "column" : 42,
-            "source_fragment" : "= (bit<9>)hdr.packet_out.egress_port; ..."
-          },
-          "key" : [],
-          "match_type" : "exact",
-          "type" : "simple",
-          "max_size" : 1024,
-          "with_counters" : false,
-          "support_timeout" : false,
-          "direct_meters" : null,
-          "action_ids" : [5],
-          "actions" : ["act"],
-          "base_default_next" : null,
-          "next_tables" : {
-            "act" : null
-          },
-          "default_entry" : {
-            "action_id" : 5,
-            "action_const" : true,
-            "action_data" : [],
-            "action_entry_const" : true
           }
         }
       ],
@@ -839,6 +839,29 @@
           "source_info" : {
             "filename" : "p4src/basic.p4",
             "line" : 175,
+            "column" : 12,
+            "source_fragment" : "hdr.packet_out.isValid()"
+          },
+          "expression" : {
+            "type" : "expression",
+            "value" : {
+              "op" : "d2b",
+              "left" : null,
+              "right" : {
+                "type" : "field",
+                "value" : ["packet_out", "$valid$"]
+              }
+            }
+          },
+          "true_next" : "tbl_act",
+          "false_next" : "node_4"
+        },
+        {
+          "name" : "node_4",
+          "id" : 1,
+          "source_info" : {
+            "filename" : "p4src/basic.p4",
+            "line" : 179,
             "column" : 12,
             "source_fragment" : "hdr.ipv4.isValid()"
           },
@@ -854,14 +877,14 @@
             }
           },
           "true_next" : "MyIngress.ipv4_lpm",
-          "false_next" : "node_4"
+          "false_next" : "node_6"
         },
         {
-          "name" : "node_4",
-          "id" : 1,
+          "name" : "node_6",
+          "id" : 2,
           "source_info" : {
             "filename" : "p4src/basic.p4",
-            "line" : 179,
+            "line" : 183,
             "column" : 12,
             "source_fragment" : "hdr.arp.isValid()"
           },
@@ -876,31 +899,8 @@
               }
             }
           },
-          "true_next" : "MyIngress.send_arp_to_cpu",
-          "false_next" : "node_6"
-        },
-        {
-          "name" : "node_6",
-          "id" : 2,
-          "source_info" : {
-            "filename" : "p4src/basic.p4",
-            "line" : 183,
-            "column" : 12,
-            "source_fragment" : "hdr.packet_out.isValid()"
-          },
-          "expression" : {
-            "type" : "expression",
-            "value" : {
-              "op" : "d2b",
-              "left" : null,
-              "right" : {
-                "type" : "field",
-                "value" : ["packet_out", "$valid$"]
-              }
-            }
-          },
           "false_next" : null,
-          "true_next" : "tbl_act"
+          "true_next" : "MyIngress.send_arp_to_cpu"
         }
       ]
     },
