@@ -44,11 +44,6 @@ sources = files('''
   src/netlink/tap_io.h
   src/netlink/tap_manager.cc
   src/netlink/tap_manager.h
-  src/of-dpa/controller.cc
-  src/of-dpa/controller.h
-  src/of-dpa/ofdpa_client.cc
-  src/of-dpa/ofdpa_client.h
-  src/of-dpa/ofdpa_datatypes.h
   src/p4/p4-controller.h
   src/p4/p4-controller.cc
   src/sai.h

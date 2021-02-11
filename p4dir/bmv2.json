@@ -38,7 +38,8 @@
       "name" : "packet_in_header_t",
       "id" : 2,
       "fields" : [
-        ["ingress_port", 16, false]
+        ["ingress_port", 16, false],
+        ["reason", 16, false]
       ]
     },
     {
@@ -89,6 +90,19 @@
         ["dstMacAddr", 48, false],
         ["dstIPAddr", 32, false]
       ]
+    },
+    {
+      "name" : "icmp_t",
+      "id" : 7,
+      "fields" : [
+        ["icmp_type", 8, false],
+        ["icmp_code", 8, false],
+        ["checksum", 16, false],
+        ["identifier", 16, false],
+        ["sequence_number", 16, false],
+        ["gateway", 32, false],
+        ["reserv", 48, false]
+      ]
     }
   ],
   "headers" : [
@@ -138,6 +152,13 @@
       "name" : "arp",
       "id" : 6,
       "header_type" : "arp_t",
+      "metadata" : false,
+      "pi_omit" : true
+    },
+    {
+      "name" : "icmp",
+      "id" : 7,
+      "header_type" : "icmp_t",
       "metadata" : false,
       "pi_omit" : true
     }
@@ -243,6 +264,40 @@
           ],
           "transitions" : [
             {
+              "type" : "hexstr",
+              "value" : "0x01",
+              "mask" : null,
+              "next_state" : "parse_icmp"
+            },
+            {
+              "value" : "default",
+              "mask" : null,
+              "next_state" : null
+            }
+          ],
+          "transition_key" : [
+            {
+              "type" : "field",
+              "value" : ["ipv4", "protocol"]
+            }
+          ]
+        },
+        {
+          "name" : "parse_icmp",
+          "id" : 3,
+          "parser_ops" : [
+            {
+              "parameters" : [
+                {
+                  "type" : "regular",
+                  "value" : "icmp"
+                }
+              ],
+              "op" : "extract"
+            }
+          ],
+          "transitions" : [
+            {
               "value" : "default",
               "mask" : null,
               "next_state" : null
@@ -252,7 +307,7 @@
         },
         {
           "name" : "parse_packet_out",
-          "id" : 3,
+          "id" : 4,
           "parser_ops" : [
             {
               "parameters" : [
@@ -275,7 +330,7 @@
         },
         {
           "name" : "parse_arp",
-          "id" : 4,
+          "id" : 5,
           "parser_ops" : [
             {
               "parameters" : [
@@ -306,75 +361,17 @@
       "id" : 0,
       "source_info" : {
         "filename" : "p4src/basic.p4",
-        "line" : 228,
+        "line" : 242,
         "column" : 8,
         "source_fragment" : "MyDeparser"
       },
-      "order" : ["packet_in", "ethernet", "arp", "ipv4"]
+      "order" : ["packet_in", "ethernet", "arp", "ipv4", "icmp"]
     }
   ],
   "meter_arrays" : [],
   "counter_arrays" : [],
   "register_arrays" : [],
-  "calculations" : [
-    {
-      "name" : "calc",
-      "id" : 0,
-      "source_info" : {
-        "filename" : "p4src/basic.p4",
-        "line" : 206,
-        "column" : 1,
-        "source_fragment" : "update_checksum( ..."
-      },
-      "algo" : "csum16",
-      "input" : [
-        {
-          "type" : "field",
-          "value" : ["ipv4", "version"]
-        },
-        {
-          "type" : "field",
-          "value" : ["ipv4", "ihl"]
-        },
-        {
-          "type" : "field",
-          "value" : ["ipv4", "diffserv"]
-        },
-        {
-          "type" : "field",
-          "value" : ["ipv4", "totalLen"]
-        },
-        {
-          "type" : "field",
-          "value" : ["ipv4", "identification"]
-        },
-        {
-          "type" : "field",
-          "value" : ["ipv4", "flags"]
-        },
-        {
-          "type" : "field",
-          "value" : ["ipv4", "fragOffset"]
-        },
-        {
-          "type" : "field",
-          "value" : ["ipv4", "ttl"]
-        },
-        {
-          "type" : "field",
-          "value" : ["ipv4", "protocol"]
-        },
-        {
-          "type" : "field",
-          "value" : ["ipv4", "srcAddr"]
-        },
-        {
-          "type" : "field",
-          "value" : ["ipv4", "dstAddr"]
-        }
-      ]
-    }
-  ],
+  "calculations" : [],
   "learn_lists" : [],
   "actions" : [
     {
@@ -398,7 +395,7 @@
           ],
           "source_info" : {
             "filename" : "p4src/basic.p4",
-            "line" : 136,
+            "line" : 157,
             "column" : 8,
             "source_fragment" : "mark_to_drop(standard_metadata)"
           }
@@ -433,7 +430,7 @@
           ],
           "source_info" : {
             "filename" : "p4src/basic.p4",
-            "line" : 140,
+            "line" : 161,
             "column" : 8,
             "source_fragment" : "standard_metadata.egress_spec = port"
           }
@@ -452,7 +449,7 @@
           ],
           "source_info" : {
             "filename" : "p4src/basic.p4",
-            "line" : 141,
+            "line" : 162,
             "column" : 8,
             "source_fragment" : "hdr.ethernet.srcAddr = hdr.ethernet.dstAddr"
           }
@@ -471,7 +468,7 @@
           ],
           "source_info" : {
             "filename" : "p4src/basic.p4",
-            "line" : 142,
+            "line" : 163,
             "column" : 8,
             "source_fragment" : "hdr.ethernet.dstAddr = dstAddr"
           }
@@ -513,7 +510,7 @@
           ],
           "source_info" : {
             "filename" : "p4src/basic.p4",
-            "line" : 143,
+            "line" : 164,
             "column" : 8,
             "source_fragment" : "hdr.ipv4.ttl = hdr.ipv4.ttl - 1"
           }
@@ -539,7 +536,7 @@
           ],
           "source_info" : {
             "filename" : "p4src/basic.p4",
-            "line" : 147,
+            "line" : 168,
             "column" : 6,
             "source_fragment" : "standard_metadata.egress_spec = 255"
           }
@@ -554,7 +551,7 @@
           ],
           "source_info" : {
             "filename" : "p4src/basic.p4",
-            "line" : 148,
+            "line" : 169,
             "column" : 8,
             "source_fragment" : "hdr.packet_in.setValid()"
           }
@@ -586,15 +583,34 @@
           ],
           "source_info" : {
             "filename" : "p4src/basic.p4",
-            "line" : 149,
+            "line" : 170,
             "column" : 8,
             "source_fragment" : "hdr.packet_in.ingress_port = (bit<16>)standard_metadata.ingress_port"
+          }
+        },
+        {
+          "op" : "assign",
+          "parameters" : [
+            {
+              "type" : "field",
+              "value" : ["packet_in", "reason"]
+            },
+            {
+              "type" : "field",
+              "value" : ["ethernet", "etherType"]
+            }
+          ],
+          "source_info" : {
+            "filename" : "p4src/basic.p4",
+            "line" : 171,
+            "column" : 8,
+            "source_fragment" : "hdr.packet_in.reason = hdr.ethernet.etherType"
           }
         }
       ]
     },
     {
-      "name" : "MyIngress.do_send_to_cpu",
+      "name" : "MyIngress.do_ipv4_send_to_cpu",
       "id" : 4,
       "runtime_data" : [],
       "primitives" : [
@@ -612,7 +628,7 @@
           ],
           "source_info" : {
             "filename" : "p4src/basic.p4",
-            "line" : 147,
+            "line" : 175,
             "column" : 6,
             "source_fragment" : "standard_metadata.egress_spec = 255"
           }
@@ -627,9 +643,24 @@
           ],
           "source_info" : {
             "filename" : "p4src/basic.p4",
-            "line" : 148,
+            "line" : 176,
             "column" : 8,
             "source_fragment" : "hdr.packet_in.setValid()"
+          }
+        },
+        {
+          "op" : "remove_header",
+          "parameters" : [
+            {
+              "type" : "header",
+              "value" : "arp"
+            }
+          ],
+          "source_info" : {
+            "filename" : "p4src/basic.p4",
+            "line" : 177,
+            "column" : 8,
+            "source_fragment" : "hdr.arp.setInvalid()"
           }
         },
         {
@@ -659,9 +690,28 @@
           ],
           "source_info" : {
             "filename" : "p4src/basic.p4",
-            "line" : 149,
+            "line" : 178,
             "column" : 8,
             "source_fragment" : "hdr.packet_in.ingress_port = (bit<16>)standard_metadata.ingress_port"
+          }
+        },
+        {
+          "op" : "assign",
+          "parameters" : [
+            {
+              "type" : "field",
+              "value" : ["packet_in", "reason"]
+            },
+            {
+              "type" : "field",
+              "value" : ["ethernet", "etherType"]
+            }
+          ],
+          "source_info" : {
+            "filename" : "p4src/basic.p4",
+            "line" : 179,
+            "column" : 8,
+            "source_fragment" : "hdr.packet_in.reason = hdr.ethernet.etherType"
           }
         }
       ]
@@ -698,7 +748,7 @@
           ],
           "source_info" : {
             "filename" : "p4src/basic.p4",
-            "line" : 176,
+            "line" : 206,
             "column" : 12,
             "source_fragment" : "standard_metadata.egress_spec = (bit<9>)hdr.packet_out.egress_port"
           }
@@ -713,7 +763,7 @@
           ],
           "source_info" : {
             "filename" : "p4src/basic.p4",
-            "line" : 177,
+            "line" : 207,
             "column" : 5,
             "source_fragment" : "hdr.packet_out.setInvalid()"
           }
@@ -727,7 +777,7 @@
       "id" : 0,
       "source_info" : {
         "filename" : "p4src/basic.p4",
-        "line" : 132,
+        "line" : 153,
         "column" : 8,
         "source_fragment" : "MyIngress"
       },
@@ -738,7 +788,7 @@
           "id" : 0,
           "source_info" : {
             "filename" : "p4src/basic.p4",
-            "line" : 176,
+            "line" : 206,
             "column" : 42,
             "source_fragment" : "= (bit<9>)hdr.packet_out.egress_port; ..."
           },
@@ -767,7 +817,7 @@
           "id" : 1,
           "source_info" : {
             "filename" : "p4src/basic.p4",
-            "line" : 160,
+            "line" : 190,
             "column" : 10,
             "source_fragment" : "ipv4_lpm"
           },
@@ -786,11 +836,11 @@
           "support_timeout" : false,
           "direct_meters" : null,
           "action_ids" : [2, 4, 1, 0],
-          "actions" : ["MyIngress.ipv4_forward", "MyIngress.do_send_to_cpu", "MyIngress.drop", "NoAction"],
+          "actions" : ["MyIngress.ipv4_forward", "MyIngress.do_ipv4_send_to_cpu", "MyIngress.drop", "NoAction"],
           "base_default_next" : "node_6",
           "next_tables" : {
             "MyIngress.ipv4_forward" : "node_6",
-            "MyIngress.do_send_to_cpu" : "node_6",
+            "MyIngress.do_ipv4_send_to_cpu" : "node_6",
             "MyIngress.drop" : "node_6",
             "NoAction" : "node_6"
           },
@@ -806,7 +856,7 @@
           "id" : 2,
           "source_info" : {
             "filename" : "p4src/basic.p4",
-            "line" : 152,
+            "line" : 182,
             "column" : 10,
             "source_fragment" : "send_arp_to_cpu"
           },
@@ -838,7 +888,7 @@
           "id" : 0,
           "source_info" : {
             "filename" : "p4src/basic.p4",
-            "line" : 175,
+            "line" : 205,
             "column" : 12,
             "source_fragment" : "hdr.packet_out.isValid()"
           },
@@ -861,7 +911,7 @@
           "id" : 1,
           "source_info" : {
             "filename" : "p4src/basic.p4",
-            "line" : 179,
+            "line" : 209,
             "column" : 12,
             "source_fragment" : "hdr.ipv4.isValid()"
           },
@@ -884,7 +934,7 @@
           "id" : 2,
           "source_info" : {
             "filename" : "p4src/basic.p4",
-            "line" : 183,
+            "line" : 213,
             "column" : 12,
             "source_fragment" : "hdr.arp.isValid()"
           },
@@ -909,7 +959,7 @@
       "id" : 1,
       "source_info" : {
         "filename" : "p4src/basic.p4",
-        "line" : 194,
+        "line" : 224,
         "column" : 8,
         "source_fragment" : "MyEgress"
       },
@@ -919,34 +969,7 @@
       "conditionals" : []
     }
   ],
-  "checksums" : [
-    {
-      "name" : "cksum",
-      "id" : 0,
-      "source_info" : {
-        "filename" : "p4src/basic.p4",
-        "line" : 206,
-        "column" : 1,
-        "source_fragment" : "update_checksum( ..."
-      },
-      "target" : ["ipv4", "hdrChecksum"],
-      "type" : "generic",
-      "calculation" : "calc",
-      "verify" : false,
-      "update" : true,
-      "if_cond" : {
-        "type" : "expression",
-        "value" : {
-          "op" : "d2b",
-          "left" : null,
-          "right" : {
-            "type" : "field",
-            "value" : ["ipv4", "$valid$"]
-          }
-        }
-      }
-    }
-  ],
+  "checksums" : [],
   "force_arith" : [],
   "extern_instances" : [],
   "field_aliases" : [

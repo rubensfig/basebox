@@ -33,10 +33,19 @@ struct packet;
 
 void P4Controller::start() noexcept { thread.wakeup(this); }
 
-void P4Controller::packet_handler(std::vector<char> packet, int port_id) {
+void P4Controller::packet_handler(std::vector<char> packet, uint16_t port_id, uint16_t reason) {
   char *pkt_data = packet.data();
   size_t offset = 0;
-  size_t pkt_size = sizeof(eth_header_t) + sizeof(arp_header_t);
+  size_t pkt_size = 0;
+
+  VLOG(1) << __FUNCTION__ << "packet in portid=" << port_id << " reason=" << reason;
+
+  if (reason == 86) // arp
+    pkt_size = sizeof(eth_header_t) + sizeof(arp_header_t);
+  else if (reason == 80)
+    pkt_size = sizeof(eth_header_t) + sizeof(ipv4_header_t) + sizeof(icmp_header_t);
+  else
+    return;
 
   struct packet *pkt = nullptr;
 
@@ -52,10 +61,12 @@ void P4Controller::handle_wakeup(rofl::cthread &thread) {
   stream->Read(&res);
 
   if (res.has_packet()) {
-    VLOG(1) << res.packet().DebugString();
+    std::string port = unpack(res.packet().metadata(0).value()); // packet in header metadata = port
+    std::string reason = unpack(res.packet().metadata(1).value()); // packet in header metadata = reason (ETHERTYPE)
+
     std::vector<char> packet = std::vector<char>(res.packet().payload().begin(),
                                                  res.packet().payload().end());
-    packet_handler(packet, 1);
+    packet_handler(packet, std::stoi(port), std::stoi(reason));
     this->thread.wakeup(this);
   }
 }
@@ -309,8 +320,7 @@ int P4Controller::l3_egress_remove(uint32_t l3_interface_id) noexcept {
 int P4Controller::l3_unicast_host_add(const rofl::caddress_in4 &ipv4_dst,
                                       uint32_t l3_interface_id, bool is_ecmp,
                                       bool update_route,
-                                      uint16_t vrf_id) noexcept {
-#if 0
+                                      uint16_t vrf_id, const rofl::caddress_ll dst_mac) noexcept {
   ::grpc::ClientContext context;
   ::p4::v1::WriteRequest req = ::p4::v1::WriteRequest();
   ::p4::v1::WriteResponse res = ::p4::v1::WriteResponse();
@@ -328,27 +338,30 @@ int P4Controller::l3_unicast_host_add(const rofl::caddress_in4 &ipv4_dst,
   table_entry->set_table_id(33574068); // MyIngress.ipv4_lpm
   auto field_match = table_entry->add_match();
   field_match->set_field_id(1);
-  std::string ip = packed_ip_address(ipv4_dst.str(), 24);
 
+  std::string ip = packed_ip_address(ipv4_dst.str(), 32);
   field_match->mutable_lpm()->set_value(ip);
-  field_match->mutable_lpm()->set_prefix_len(24);
+  field_match->mutable_lpm()->set_prefix_len(32);
 
   auto action = table_entry->mutable_action()->mutable_action();
   action->set_action_id(16799317); // ipv4_forwarding
 
   auto param1 = action->add_params();
   param1->set_param_id(1); // name: "dstAddr"
-  param1->set_value("00:00:00:00:01:01");
+  std::string mac = packed_mac_address(dst_mac.str());
+  param1->set_value(mac);
 
   auto param2 = action->add_params();
+  std::stringstream value;
+  value << std::hex << (unsigned char)0 << std::hex << (unsigned char)l3_interface_id;
   param2->set_param_id(2); // name: "port"
-  param2->set_value("1");
+  param2->set_value(value.str());
 
   VLOG(1) << __FUNCTION__ << req.DebugString();
   stub->Write(&context, req, &res);
 
-  VLOG(1) << " Configuring IP host";
-#endif
+  VLOG(1) << __FUNCTION__ << res.DebugString();
+
   return 0;
 }
 
@@ -505,10 +518,6 @@ int P4Controller::set_egress_tpid(uint32_t port) noexcept { return 0; }
 int P4Controller::delete_egress_tpid(uint32_t port) noexcept { return 0; }
 
 int P4Controller::enqueue(uint32_t port_id, basebox::packet *pkt) noexcept {
-	VLOG(1) << "PACKET OUT";
-
-	if (port_id != 1)
-		return 0;
   ::p4::v1::StreamMessageRequest req = ::p4::v1::StreamMessageRequest();
 
   char *packet = (char*)std::malloc(pkt->len);
@@ -521,7 +530,7 @@ int P4Controller::enqueue(uint32_t port_id, basebox::packet *pkt) noexcept {
 
   metadata->set_metadata_id(1);
   std::stringstream value;
-  value << std::hex << (unsigned char)0 << std::hex << (unsigned char)1;
+  value << std::hex << (unsigned char)0 << std::hex << (unsigned char)port_id;
   metadata->set_value(value.str());
 
   VLOG(1) << req.DebugString();

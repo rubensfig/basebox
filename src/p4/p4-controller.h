@@ -8,6 +8,7 @@
 #include <sys/wait.h>
 
 #include <exception>
+#include <charconv>
 #include <iostream>
 #include <fstream>
 #include <memory>
@@ -30,6 +31,7 @@ namespace basebox {
 
 struct __attribute__((packed)) packetin_header_t {
   uint16_t port;
+  uint16_t reason;
 };
 
 struct __attribute__((packed)) eth_header_t {
@@ -48,6 +50,22 @@ struct __attribute__((packed)) arp_header_t {
   uint32_t proto_src_addr;
   unsigned char hw_dst_addr[6];
   uint32_t proto_dst_addr;
+};
+
+struct __attribute__((packed)) ipv4_header_t {
+  unsigned char noise[16];
+  uint32_t dst_addr;
+};
+
+struct __attribute__((packed)) icmp_header_t {
+  uint8_t   i_type;
+  uint8_t   i_code;
+  uint16_t  i_cksum;
+  uint16_t  i_identifier;
+  uint16_t  i_sequence_number;
+  uint32_t  i_gw;
+  uint16_t  i_frag;
+  uint8_t   i_reserv[4];
 };
 
 class P4Controller : public basebox::switch_interface,
@@ -152,7 +170,7 @@ public:
   int l3_unicast_host_add(const rofl::caddress_in4 &ipv4_dst,
                           uint32_t l3_interface, bool is_ecmp,
                           bool update_route,
-                          uint16_t vrf_id = 0) noexcept override;
+                          uint16_t vrf_id = 0, const rofl::caddress_ll dst_mac = 0) noexcept override;
   int l3_unicast_host_remove(const rofl::caddress_in4 &ipv4_dst,
                              uint16_t vrf_id = 0) noexcept override;
 
@@ -300,6 +318,14 @@ private:
     return ret.str();
   }
 
+  std::string unpack(std::string val) {
+    std::stringstream st;
+    for (auto i: val)
+      st << (int)i;
+
+    return st.str();
+  }
+
   std::string packed_ip_address(std::string ip, int prefixlen) {
     std::stringstream ret;
     auto ip_c = strdup(ip.c_str());
@@ -314,7 +340,8 @@ private:
     free(ip_c);
     return ret.str();
   }
-  void packet_handler(std::vector<char> packet, int port_id);
+
+  void packet_handler(std::vector<char> packet, uint16_t port_id, uint16_t reason);
 
   std::string open_file(std::string file) {
     std::ifstream ifs(file, std::ios::binary);

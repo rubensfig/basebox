@@ -28,7 +28,7 @@ tables {
     id: 16799317
   }
   action_refs {
-    id: 16829203
+    id: 16795227
   }
   action_refs {
     id: 16805608
@@ -76,6 +76,13 @@ actions {
     alias: "do_send_to_cpu"
   }
 }
+actions {
+  preamble {
+    id: 16795227
+    name: "MyIngress.do_ipv4_send_to_cpu"
+    alias: "do_ipv4_send_to_cpu"
+  }
+}
 controller_packet_metadata {
   preamble {
     id: 67146229
@@ -86,6 +93,11 @@ controller_packet_metadata {
   metadata {
     id: 1
     name: "ingress_port"
+    bitwidth: 16
+  }
+  metadata {
+    id: 2
+    name: "reason"
     bitwidth: 16
   }
 }

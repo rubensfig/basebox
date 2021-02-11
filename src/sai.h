@@ -108,7 +108,7 @@ public:
   virtual int l3_unicast_host_add(const rofl::caddress_in4 &ipv4_dst,
                                   uint32_t l3_interface, bool is_ecmp,
                                   bool update_route,
-                                  uint16_t vrf_id = 0) noexcept = 0;
+                                  uint16_t vrf_id = 0, const rofl::caddress_ll dst_mac = 0) noexcept = 0;
   virtual int l3_unicast_host_remove(const rofl::caddress_in4 &ipv4_dst,
                                      uint16_t vrf_id = 0) noexcept = 0;
 
